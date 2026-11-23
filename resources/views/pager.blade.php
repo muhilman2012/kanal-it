@@ -1,0 +1,1 @@
+@if($items->hasPages())<div class="pager actions">@if($items->previousPageUrl())<a href="{{ $items->previousPageUrl() }}">Sebelumnya</a>@endif Halaman {{ $items->currentPage() }} dari {{ $items->lastPage() }} @if($items->nextPageUrl())<a href="{{ $items->nextPageUrl() }}">Berikutnya</a>@endif</div>@endif

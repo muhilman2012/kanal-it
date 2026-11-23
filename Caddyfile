@@ -1,0 +1,4 @@
+https://{$VPS_IP} {
+    tls internal
+    reverse_proxy web:80
+}

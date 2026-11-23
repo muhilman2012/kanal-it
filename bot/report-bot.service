@@ -1,0 +1,16 @@
+[Unit]
+Description=Kanal IT WhatsApp reporting bot
+After=kanal-it.service network-online.target
+Wants=kanal-it.service
+
+[Service]
+User=hilman
+Group=hilman
+WorkingDirectory=/home/hilman/code/kanal-it/bot
+ExecStart=/usr/bin/node index.js
+Restart=always
+RestartSec=10
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

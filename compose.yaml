@@ -1,0 +1,42 @@
+name: kanal-it
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: deploy.env
+    volumes:
+      - data:/data
+      - botstate:/var/www/html/storage/app/private/report-bot
+    command: ["sh","-ec","umask 077; mkdir -p /data; touch /data/kanal.sqlite; printf '%s' \"$$REPORT_BOT_TOKEN\" > storage/app/private/report-bot/token; chown -R www-data:www-data /data storage/app/private/report-bot; su -s /bin/sh www-data -c 'php artisan migrate --force'; exec apache2-foreground"]
+    healthcheck:
+      test: ["CMD","php","-r","exit(@file_get_contents('http://localhost/up')===false?1:0);"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+  bot:
+    build: ./bot
+    init: true
+    restart: unless-stopped
+    depends_on:
+      web: {condition: service_healthy}
+    environment:
+      WA_NO_SANDBOX: "1"
+      REPORT_ENDPOINT: http://web/api/laporan/masuk
+    volumes:
+      - botstate:/opt/kanal/storage/app/private/report-bot
+    shm_size: 256mb
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      VPS_IP: ${VPS_IP:?Isi IP VPS}
+    ports: ["${KANAL_PORT:-8443}:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - tls:/data
+    depends_on:
+      web: {condition: service_healthy}
+volumes:
+  data:
+  botstate:
+  tls:

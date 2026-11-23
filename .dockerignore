@@ -1,0 +1,14 @@
+.git
+.env*
+deploy.env
+vendor
+node_modules
+bot
+database/*.sqlite*
+storage/**
+!storage/**/
+!storage/**/.gitignore
+bootstrap/cache/*.php
+auth.json
+
+storage/app/private

@@ -1,0 +1,1 @@
+<div class="art emblem" aria-hidden="true"><div class="grid"></div><img src="/setneg.png" alt=""></div>
