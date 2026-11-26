@@ -20,6 +20,7 @@ class ReportAdminController extends Controller
     public function index()
     {
         return view('report-admin',['employees'=>DB::table('employees')->orderBy('name')->get(),
+            'linkedEmployees'=>DB::table('users')->whereNotNull('employee_id')->pluck('employee_id')->all(),
             'enabled'=>DB::table('report_groups')->pluck('jid')->all(),'state'=>$this->state()]);
     }
 

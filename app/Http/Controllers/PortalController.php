@@ -12,6 +12,7 @@ class PortalController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate(['email' => 'required|email', 'password' => 'required|string']);
+        $credentials['active'] = true;
         if (!Auth::attempt($credentials)) {
             return back()->withErrors(['email' => 'Email atau password belum sesuai.'])->onlyInput('email');
         }
@@ -41,7 +42,11 @@ class PortalController extends Controller
 
     public function home()
     {
-        return view('home', ['accounts' => DB::table('office_accounts')->count(), 'reports' => DB::table('daily_reports')->count()]);
+        $user = request()->user();
+        return view('home', [
+            'accounts' => $user->hasMenuPermission('accounts') ? DB::table('office_accounts')->count() : 0,
+            'reports' => $user->hasMenuPermission('reports') ? DB::table('daily_reports')->count() : 0,
+        ]);
     }
 
     public function accounts(Request $request)
