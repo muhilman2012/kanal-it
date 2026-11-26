@@ -31,6 +31,7 @@ Route::middleware(['auth', 'auth.session', 'menu:portal', 'cache.headers:no_stor
     Route::delete('/zoom/account/{id}',[Zoom::class,'deleteAccount'])->whereNumber('id');
     });
     Route::get('/', [Portal::class, 'home'])->name('dashboard');
+    Route::view('/panduan-bot', 'bot-guide')->middleware('menu:bot_guide');
     Route::post('/keluar', [Portal::class, 'logout'])->withoutMiddleware('menu:portal');
     Route::view('/pengaturan', 'settings');
     Route::put('/pengaturan', [Portal::class, 'changePassword']);

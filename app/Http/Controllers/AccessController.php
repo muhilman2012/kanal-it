@@ -18,6 +18,7 @@ class AccessController extends Controller
         'report_bot' => 'Pengaturan Bot dan Pegawai',
         'zoom' => 'Permintaan Zoom',
         'pins' => 'Postingan Penting',
+        'bot_guide' => 'Panduan Bot WhatsApp',
     ];
 
     public function index()

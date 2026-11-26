@@ -57,4 +57,21 @@ class AccessControlTest extends TestCase
             ->post('/login', ['email'=>$admin->email,'password'=>'password-uji-123'])
             ->assertRedirect('https://129.225.0.212:8443/akses');
     }
+
+    public function test_logged_in_members_can_read_bot_command_guide(): void
+    {
+        $this->get('/panduan-bot')->assertRedirect('/login');
+        $role = AccessRole::where('name', 'Pegawai')->firstOrFail();
+        $member = User::factory()->create(['access_role_id'=>$role->id]);
+        $this->actingAs($member)->get('/panduan-bot')->assertOk()
+            ->assertSee('Panduan Bot WhatsApp')
+            ->assertSee('/halo')->assertSee('/zoom')
+            ->assertSee('/pdf')->assertSee('/akun')
+            ->assertSee('/setuju KODE NOMOR_AKUN');
+        $this->get('/')->assertSee('Panduan Bot');
+        $role->update(['permissions'=>['reports']]);
+        $member->unsetRelation('accessRole');
+        $this->get('/panduan-bot')->assertForbidden();
+        $this->get('/')->assertDontSee('href="/panduan-bot"', false);
+    }
 }
