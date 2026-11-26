@@ -6,6 +6,10 @@ const QRCode = require('qrcode');
 const {envelope} = require('./relay');
 const dir = path.resolve(__dirname,'../storage/app/private/report-bot');
 fs.mkdirSync(dir,{mode:0o700,recursive:true});
+// Chromium leaves these profile locks when the previous container is replaced.
+for (const name of ['SingletonLock','SingletonCookie','SingletonSocket']) {
+    fs.rmSync(path.join(dir,'session','session',name),{force:true});
+}
 const token=fs.readFileSync(path.join(dir,'token'),'utf8').trim();
 const now=()=>Math.floor(Date.now()/1000);
 let state={status:'Memulai WhatsApp Web'};
