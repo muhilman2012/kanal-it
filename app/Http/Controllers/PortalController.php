@@ -100,9 +100,21 @@ class PortalController extends Controller
             $reports=$query->orderByDesc('report_date')->orderByDesc('id')->paginate(20)->withQueryString();
             return view('report-person',compact('employee','author','reports','month','employees'));
         }
-        $counts=(clone $query)->whereNotNull('employee_id')->groupBy('employee_id')->selectRaw('employee_id,count(*) as total')->pluck('total','employee_id');
-        $manual=$query->whereNull('employee_id')->groupBy('author')->orderBy('author')->selectRaw('author,count(*) as total')->get();
-        return view('reports',compact('employees','counts','manual','month'));
+        $employeeCounts=(clone $query)->whereNotNull('employee_id')->groupBy('employee_id')
+            ->selectRaw('employee_id,count(*) as total,max(report_date) as last_date')->get()->keyBy('employee_id');
+        $manual=$query->whereNull('employee_id')->groupBy('author')
+            ->selectRaw('author,count(*) as total,max(report_date) as last_date')->get();
+        $people=$employees->map(function($person) use($employeeCounts){
+            $summary=$employeeCounts->get($person->id);
+            return (object)['name'=>$person->name,'position'=>$person->position,'employee_id'=>$person->id,
+                'total'=>$summary->total??0,'last_date'=>$summary->last_date??null];
+        })->concat($manual->map(fn($person)=>(object)[
+            'name'=>$person->author,'position'=>'Pelapor manual','employee_id'=>null,
+            'total'=>$person->total,'last_date'=>$person->last_date,
+        ]))->sort(function($a,$b){
+            return strcmp($b->last_date??'',$a->last_date??'') ?: strcasecmp($a->name,$b->name);
+        })->values();
+        return view('reports',compact('employees','people','month'));
     }
 
     public function saveReport(Request $request, ?int $id=null)

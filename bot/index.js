@@ -6,6 +6,11 @@ const QRCode = require('qrcode');
 const {envelope} = require('./relay');
 const dir = path.resolve(__dirname,'../storage/app/private/report-bot');
 fs.mkdirSync(dir,{mode:0o700,recursive:true});
+const logoutFile=path.join(dir,'logout.request');
+if (fs.existsSync(logoutFile)) {
+    fs.rmSync(path.join(dir,'session'),{recursive:true,force:true});
+    fs.rmSync(logoutFile,{force:true});
+}
 // Chromium leaves these profile locks when the previous container is replaced.
 for (const name of ['SingletonLock','SingletonCookie','SingletonSocket']) {
     fs.rmSync(path.join(dir,'session','session',name),{force:true});
@@ -35,8 +40,24 @@ async function groups() {
 }
 client.on('ready',()=>{publish({status:'Terhubung',qr:null}); groups().catch(()=>console.error('Daftar grup akan dicoba lagi.'));});
 setInterval(()=>groups().catch(()=>console.error('Gagal memperbarui daftar grup.')),60000);
-client.on('disconnected',()=>{publish({status:'Terputus',qr:null});process.exit(1);});
-client.on('auth_failure',()=>{publish({status:'Penautan gagal',qr:null});process.exit(1);});
+let disconnecting=false;
+client.on('disconnected',()=>{publish({status:'Terputus',qr:null});if(!disconnecting)process.exit(1);});
+client.on('auth_failure',()=>{publish({status:'Penautan gagal',qr:null});if(!disconnecting)process.exit(1);});
+async function disconnectWhatsApp() {
+    if (disconnecting || !fs.existsSync(logoutFile)) return;
+    disconnecting=true;
+    fs.rmSync(logoutFile,{force:true});
+    publish({status:'Melepas sambungan',qr:null,groups:[]});
+    try {
+        if (client.pupPage && !client.pupPage.isClosed()) {
+            await Promise.race([client.logout(),delay(15000).then(()=>{throw new Error('Logout timeout');})]);
+        }
+    } catch(error) { console.error('Logout WhatsApp:',error.message); }
+    try { await client.destroy(); } catch {}
+    fs.rmSync(path.join(dir,'session'),{recursive:true,force:true});
+    process.exit(1);
+}
+setInterval(()=>disconnectWhatsApp().catch(error=>console.error('Lepas WhatsApp gagal:',error.message)),3000);
 async function forward(payload) {
     for(let attempt=0;attempt<4;attempt++) {
         try {

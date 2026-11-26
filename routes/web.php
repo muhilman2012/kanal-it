@@ -14,6 +14,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware(['auth', 'auth.session', 'cache.headers:no_store;private'])->group(function () {
     Route::get('/zoom',[Zoom::class,'index']);
     Route::get('/zoom/{id}',[Zoom::class,'show'])->whereNumber('id');
+    Route::delete('/zoom/{id}',[Zoom::class,'deleteRequest'])->whereNumber('id');
     Route::post('/zoom/approver',[Zoom::class,'approver']);
     Route::put('/zoom/approver/{id}',[Zoom::class,'approver'])->whereNumber('id');
     Route::delete('/zoom/approver/{id}',[Zoom::class,'deleteApprover'])->whereNumber('id');
@@ -34,6 +35,7 @@ Route::middleware(['auth', 'auth.session', 'cache.headers:no_store;private'])->g
     Route::delete('/penting/{id}',[Pins::class,'delete'])->whereNumber('id');
     Route::get('/laporan/bot',[ReportAdmin::class,'index']);
     Route::get('/laporan/bot/qr',[ReportAdmin::class,'qr']);
+    Route::post('/laporan/bot/lepas',[ReportAdmin::class,'disconnect']);
     Route::post('/laporan/bot/pegawai/{id?}',[ReportAdmin::class,'employee'])->whereNumber('id');
     Route::post('/laporan/bot/grup',[ReportAdmin::class,'group']);
     Route::post('/laporan/{id}/pegawai',[ReportAdmin::class,'assign'])->whereNumber('id');

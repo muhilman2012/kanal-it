@@ -84,4 +84,19 @@ class ZoomRequestTest extends TestCase {
    $this->assertStringContainsString('sudah disetujui oleh penyetuju lain',DB::table('zoom_outbox')->where('phone','628111111111')->first()->body);
   } finally {\Carbon\Carbon::setTestNow();}
  }
+
+ public function test_finished_zoom_history_can_be_deleted_but_pending_request_is_kept():void {
+  $this->actingAs(\App\Models\User::factory()->create());
+  $old=DB::table('zoom_requests')->insertGetId(['phone'=>'628111111111','requester_name'=>'Pemohon','unit'=>'Biro','agenda'=>'Rapat lama','starts_at'=>'2026-01-01 09:00:00','ends_at'=>'2026-01-01 10:00:00','participants'=>5,'recording'=>'Tidak','status'=>'approved','created_at'=>now(),'updated_at'=>now()]);
+  DB::table('zoom_request_logs')->insert(['zoom_request_id'=>$old,'event'=>'meeting_created','created_at'=>now(),'updated_at'=>now()]);
+  DB::table('zoom_outbox')->insert(['zoom_request_id'=>$old,'phone'=>'628111111111','body'=>'Selesai','created_at'=>now(),'updated_at'=>now()]);
+  $pending=DB::table('zoom_requests')->insertGetId(['phone'=>'628111111111','requester_name'=>'Pemohon','unit'=>'Biro','agenda'=>'Rapat baru','starts_at'=>'2026-12-01 09:00:00','ends_at'=>'2026-12-01 10:00:00','participants'=>5,'recording'=>'Tidak','status'=>'pending','created_at'=>now(),'updated_at'=>now()]);
+  $this->delete('/zoom/'.$pending)->assertRedirect();
+  $this->assertDatabaseHas('zoom_requests',['id'=>$pending]);
+  $this->get('/zoom/'.$old)->assertOk()->assertSee('Hapus riwayat');
+  $this->delete('/zoom/'.$old)->assertRedirect('/zoom');
+  $this->assertDatabaseMissing('zoom_requests',['id'=>$old]);
+  $this->assertDatabaseCount('zoom_request_logs',0);
+  $this->assertDatabaseCount('zoom_outbox',0);
+ }
 }

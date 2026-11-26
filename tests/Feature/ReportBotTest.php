@@ -78,4 +78,19 @@ class ReportBotTest extends TestCase
         $id=DB::table('employees')->where('phone',$this->message['phone'])->value('id');
         $this->get('/laporan/bulanan?employee='.$id.'&month=2026-10')->assertHeader('Content-Type','application/pdf');
     }
+
+    public function test_authenticated_admin_can_request_whatsapp_disconnect():void
+    {
+        $file=storage_path('app/private/report-bot/logout.request');
+        @unlink($file);
+        try {
+            $this->post('/laporan/bot/lepas')->assertRedirect('/login');
+            $this->actingAs(User::factory()->create());
+            $this->get('/laporan/bot')->assertOk()->assertSee('Lepas WhatsApp');
+            $this->post('/laporan/bot/lepas')->assertRedirect();
+            $this->assertFileExists($file);
+        } finally {
+            @unlink($file);
+        }
+    }
 }

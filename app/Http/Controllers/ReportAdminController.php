@@ -23,6 +23,14 @@ class ReportAdminController extends Controller
             'enabled'=>DB::table('report_groups')->pluck('jid')->all(),'state'=>$this->state()]);
     }
 
+    public function disconnect()
+    {
+        $directory=storage_path('app/private/report-bot');
+        if (!is_dir($directory)) mkdir($directory,0700,true);
+        file_put_contents($directory.'/logout.request',now()->toIso8601String(),LOCK_EX);
+        return back()->with('status','Permintaan melepas WhatsApp dikirim. Perbarui status untuk melihat QR baru.');
+    }
+
     public function qr()
     {
         $state=$this->state();

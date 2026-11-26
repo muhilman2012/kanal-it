@@ -28,6 +28,13 @@ class ZoomController extends Controller {
   if(DB::table('zoom_requests')->where('zoom_account_id',$id)->exists())return back()->withErrors(['account'=>'Akun Zoom memiliki riwayat permintaan. Nonaktifkan agar log tetap utuh.']);
   DB::table('zoom_accounts')->where('id',$id)->delete();return back()->with('status','Akun Zoom dihapus.');
  }
+ public function deleteRequest(int $id){
+  $item=DB::table('zoom_requests')->find($id);abort_unless($item,404);
+  $finished=in_array($item->status,['rejected','failed']) || ($item->status==='approved' && $item->ends_at<now('Asia/Jakarta')->format('Y-m-d H:i:s'));
+  if(!$finished)return back()->withErrors(['request'=>'Hanya riwayat yang selesai dapat dihapus.']);
+  DB::table('zoom_requests')->where('id',$id)->delete();
+  return redirect('/zoom')->with('status','Riwayat permintaan Zoom dihapus.');
+ }
  public function approve(Request $request,int $id){$data=$request->validate(['account_id'=>'required|integer|exists:zoom_accounts,id']);$item=DB::table('zoom_requests')->find($id);abort_unless($item,404);$actor=$request->user()->email;return back()->with('status',Zoom::create($id,(int)$data['account_id'],$actor));}
  public function reject(Request $request,int $id){$data=$request->validate(['reason'=>'required|string|max:1000']);$item=DB::table('zoom_requests')->find($id);abort_unless($item,404);abort_unless(DB::table('zoom_requests')->where('id',$id)->where('status','pending')->update(['status'=>'rejected','rejection_reason'=>$data['reason'],'updated_at'=>now()]),409);Zoom::log($id,'rejected',$request->user()->email,$data['reason']);Zoom::notify($item->phone,'Permintaan Zoom #'.$id.' ditolak. Alasan: '.$data['reason']);return back()->with('status','Permintaan ditolak.');}
 }
