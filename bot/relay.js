@@ -21,7 +21,7 @@ async function envelope(client, message) {
             }
         }
         mentioned=Boolean(matched);
-        if (!mentioned && !/^\/(?:penting|cuti|izin|sakit|pdf)(?:\s|$)/i.test(body.trim())) return;
+        if (!mentioned && !/^\/(?:zoom|setuju|tolak|akun|tutorial|penting|cuti|izin|sakit|pdf)(?:\s|$)/i.test(body.trim())) return;
         // Only strip the bot's mention, retaining other people mentioned in the activity.
         for (const id of matched ? new Set([matched,own,await asPhone(own)]) : []) {
             if (id) body=body.replace(new RegExp('@'+id.split('@')[0]+'(?![0-9])','g'),'');

@@ -29,7 +29,7 @@ class ReportText
                 throw new InvalidArgumentException('Gunakan /'.strtolower($absence).' diikuti tanggal lengkap, misalnya 25 nov 2026.');
             }
         } elseif (str_starts_with($text,'/')) {
-            throw new InvalidArgumentException('Perintah tersedia: /cuti, /izin, /sakit, /pdf, dan /penting.');
+            throw new InvalidArgumentException('Kirim /tutorial untuk panduan. Perintah tersedia: /cuti, /izin, /sakit, /pdf, dan /penting.');
         }
         preg_match_all($pattern, $text, $matches, PREG_SET_ORDER|PREG_UNMATCHED_AS_NULL);
         $dates = [];

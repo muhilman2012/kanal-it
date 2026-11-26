@@ -3,6 +3,7 @@
 use App\Http\Controllers\PortalController as Portal;
 use App\Http\Controllers\ReportAdminController as ReportAdmin;
 use App\Http\Controllers\PinnedPostController as Pins;
+use App\Http\Controllers\ZoomController as Zoom;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -11,6 +12,13 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware(['auth', 'auth.session', 'cache.headers:no_store;private'])->group(function () {
+    Route::get('/zoom',[Zoom::class,'index']);
+    Route::get('/zoom/{id}',[Zoom::class,'show'])->whereNumber('id');
+    Route::post('/zoom/approver',[Zoom::class,'approver']);
+    Route::put('/zoom/approver/{id}',[Zoom::class,'approver'])->whereNumber('id');
+    Route::delete('/zoom/approver/{id}',[Zoom::class,'deleteApprover'])->whereNumber('id');
+    Route::post('/zoom/account',[Zoom::class,'account']);
+    Route::delete('/zoom/account/{id}',[Zoom::class,'deleteAccount'])->whereNumber('id');
     Route::get('/', [Portal::class, 'home'])->name('dashboard');
     Route::post('/keluar', [Portal::class, 'logout']);
     Route::view('/pengaturan', 'settings');

@@ -70,3 +70,16 @@ client.on('message',async message=>{
     } catch {console.error('Pemrosesan pesan gagal. Periksa koneksi layanan.');}
 });
 client.initialize().catch(error=>{console.error('Gagal memulai browser:',error.name,String(error.message).slice(0,650));process.exit(1);});
+async function deliverZoomNotifications() {
+    if (!client.info) return;
+    const endpoint=(process.env.REPORT_ENDPOINT || 'http://127.0.0.1:8094/api/laporan/masuk').replace('/laporan/masuk','/zoom/outbox');
+    const response=await fetch(endpoint,{headers:{Authorization:'Bearer '+token},signal:AbortSignal.timeout(10000)});
+    if(!response.ok)return;
+    for(const item of await response.json()) {
+        try {
+            await client.sendMessage(item.phone+'@c.us',item.body);
+            await fetch(endpoint+'/'+item.id+'/sent',{method:'POST',headers:{Authorization:'Bearer '+token},signal:AbortSignal.timeout(10000)});
+        }catch(error){console.error('Pengiriman notifikasi Zoom gagal:',error.message);break;}
+    }
+}
+setInterval(()=>deliverZoomNotifications().catch(e=>console.error('Outbox Zoom:',e.message)),10000);

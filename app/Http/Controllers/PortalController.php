@@ -66,7 +66,7 @@ class PortalController extends Controller
         } else {
             DB::table('office_accounts')->insert($values + ['created_at' => now()]);
         }
-        return redirect('/akun')->with('status', 'Akun Office tersimpan.');
+        return redirect('/akun')->with('status', 'Akun tersimpan.');
     }
 
     public function copyPassword(int $id)
@@ -79,7 +79,7 @@ class PortalController extends Controller
     public function deleteAccount(int $id)
     {
         abort_unless(DB::table('office_accounts')->where('id', $id)->delete(), 404);
-        return redirect('/akun')->with('status', 'Akun Office dihapus.');
+        return redirect('/akun')->with('status', 'Akun dihapus.');
     }
 
     public function reports(Request $request)

@@ -1,3 +1,7 @@
+{
+    default_sni {$VPS_IP}
+}
+
 https://{$VPS_IP} {
     tls internal
     reverse_proxy web:80

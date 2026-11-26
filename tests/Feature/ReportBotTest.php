@@ -22,6 +22,17 @@ class ReportBotTest extends TestCase
     {
         return $this->withToken('testing')->postJson('/api/laporan/masuk',array_replace($this->message,$changes));
     }
+    public function test_private_account_menu_and_selection():void
+    {
+        $id=DB::table('office_accounts')->insertGetId(['label'=>'Office Uji','username'=>encrypt('dummy-user',false),'password'=>encrypt('dummy-pass',false),'created_at'=>now(),'updated_at'=>now()]);
+        $this->send(['text'=>'/akun Office'])->assertOk()->assertSee('Office Uji')->assertDontSee('dummy-pass');
+        $this->send(['text'=>'1'])->assertOk()->assertSee('dummy-user')->assertSee('dummy-pass');
+        $this->send(['text'=>'1','phone'=>'628440000000'])->assertNoContent();
+        DB::table('report_groups')->insert(['jid'=>'123@g.us']);
+        $this->send(['text'=>'/akun','group'=>'123@g.us'])->assertSee('chat pribadi')->assertDontSee('Office Uji');
+        $this->travel(6)->minutes();
+        $this->send(['text'=>'1'])->assertSee('Pilihan tidak tersedia');
+    }
     public function test_access_checks_and_group_allowlist():void
     {
         $this->postJson('/api/laporan/masuk',$this->message)->assertForbidden();
