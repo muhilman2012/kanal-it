@@ -25,7 +25,7 @@ class AccessControlTest extends TestCase
         $member = User::where('email','hilman@example.test')->firstOrFail();
         $this->assertSame($employeeId, $member->employee_id);
         $this->post('/keluar');
-        $this->post('/login', ['email'=>$member->email,'password'=>'password-uji-123'])->assertRedirect('/');
+        $this->post('/login', ['email'=>$member->email,'password'=>'password-uji-123'])->assertRedirect(rtrim(config('app.url'), '/').'/');
         $this->get('/')->assertOk()->assertDontSee('Buka clipboard');
         $this->get('/laporan')->assertOk();
         $this->get('/akun')->assertForbidden();
@@ -45,5 +45,16 @@ class AccessControlTest extends TestCase
         $admin->update(['active'=>false]);
         $this->post('/keluar');
         $this->post('/login', ['email'=>$admin->email,'password'=>'password-uji-123'])->assertSessionHasErrors('email');
+    }
+
+    public function test_admin_page_renders_and_login_redirect_uses_configured_https_url(): void
+    {
+        $admin = User::factory()->create(['email'=>'admin@example.test','password'=>'password-uji-123']);
+        $this->actingAs($admin)->get('/akses')->assertOk()->assertSee('Admin IT');
+        $this->post('/keluar');
+        config(['app.url'=>'https://129.225.0.212:8443']);
+        $this->withSession(['url.intended'=>'http://129.225.0.212:8443/akses'])
+            ->post('/login', ['email'=>$admin->email,'password'=>'password-uji-123'])
+            ->assertRedirect('https://129.225.0.212:8443/akses');
     }
 }

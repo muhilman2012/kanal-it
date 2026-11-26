@@ -17,7 +17,17 @@ class PortalController extends Controller
             return back()->withErrors(['email' => 'Email atau password belum sesuai.'])->onlyInput('email');
         }
         $request->session()->regenerate();
-        return redirect()->intended('/');
+        $intended = $request->session()->pull('url.intended', '/');
+        $target = parse_url($intended);
+        $configured = parse_url(config('app.url'));
+        $sameHost = !isset($target['host']) || (
+            strcasecmp($target['host'], $configured['host'] ?? '') === 0
+            && (!isset($target['port']) || $target['port'] === ($configured['port'] ?? null))
+        );
+        $path = $sameHost ? ($target['path'] ?? '/') : '/';
+        if (!str_starts_with($path, '/') || str_starts_with($path, '//')) $path = '/';
+        if ($sameHost && isset($target['query'])) $path .= '?'.$target['query'];
+        return redirect()->away(rtrim(config('app.url'), '/').$path);
     }
 
     public function logout(Request $request)
