@@ -69,7 +69,28 @@ client.on('message',async message=>{
         }
     } catch {console.error('Pemrosesan pesan gagal. Periksa koneksi layanan.');}
 });
-client.initialize().catch(error=>{console.error('Gagal memulai browser:',error.name,String(error.message).slice(0,650));process.exit(1);});
+let reinjecting=false;
+async function keepLoginPageAlive() {
+    if (!client.pupPage || client.pupPage.isClosed() || state.status==='Terhubung') return;
+    const login=await client.pupPage.evaluate(()=>({
+        path:location.pathname,
+        qr:location.pathname.startsWith('/login') ? document.querySelector('canvas')?.toDataURL('image/png') : null
+    }));
+    if (login.qr) {
+        const qr=login.qr.split(',')[1];
+        if (qr && qr!==state.qr) publish({status:'Menunggu pemindaian QR',qr,qrAt:now()});
+    } else if (!login.path.startsWith('/login') && !reinjecting) {
+        reinjecting=true;
+        try { await client.inject(); }
+        catch(error) { console.error('Menunggu autentikasi WhatsApp:',error.name,String(error.message).slice(0,150)); }
+        finally { reinjecting=false; }
+    }
+}
+setInterval(()=>keepLoginPageAlive().catch(error=>console.error('Pemantauan QR gagal:',error.message)),10000);
+client.initialize().catch(error=>{
+    console.error('Inisialisasi WhatsApp belum selesai:',error.name,String(error.message).slice(0,150));
+    keepLoginPageAlive().catch(()=>{});
+});
 async function deliverZoomNotifications() {
     if (!client.info) return;
     const endpoint=(process.env.REPORT_ENDPOINT || 'http://127.0.0.1:8094/api/laporan/masuk').replace('/laporan/masuk','/zoom/outbox');
