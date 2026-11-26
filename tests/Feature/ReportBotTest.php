@@ -41,6 +41,39 @@ class ReportBotTest extends TestCase
         $this->send(['phone'=>$outside,'group'=>'456@g.us','text'=>'/halo'])->assertNoContent();
         $this->send(['group'=>'123@g.us','text'=>'/halo'])->assertOk()->assertSee('/akun');
     }
+    public function test_monthly_report_lists_weekdays_and_worked_weekends_in_date_order():void
+    {
+        $employeeId=DB::table('employees')->where('phone',$this->message['phone'])->value('id');
+        $otherId=DB::table('employees')->insertGetId(['name'=>'Pegawai Lain','phone'=>'628440000000','position'=>'Teknisi']);
+        foreach ([
+            ['employee_id'=>$employeeId,'author'=>'Pegawai Uji','report_date'=>'2026-11-02','attendance'=>'Masuk','body'=>"Cek jaringan\nPerbaiki perangkat",'progress'=>'Selesai','obstacle'=>'Menunggu kabel'],
+            ['employee_id'=>$employeeId,'author'=>'Pegawai Uji','report_date'=>'2026-11-02','attendance'=>'Masuk','body'=>'Uji server'],
+            ['employee_id'=>$employeeId,'author'=>'Pegawai Uji','report_date'=>'2026-11-07','attendance'=>'Masuk','body'=>'Tugas akhir pekan'],
+            ['employee_id'=>$otherId,'author'=>'Pegawai Lain','report_date'=>'2026-11-03','attendance'=>'Masuk','body'=>'Rahasia pegawai lain'],
+        ] as $row) DB::table('daily_reports')->insert($row+['created_at'=>now(),'updated_at'=>now()]);
+
+        $reply=$this->send(['text'=>'/laporan November 2026'])->assertOk()->json('reply');
+        $this->assertStringStartsWith('*Laporan November 2026*', $reply);
+        $this->assertStringContainsString('1. Senin, 2 November 2026', $reply);
+        $this->assertStringContainsString('6. Sabtu, 7 November 2026', $reply);
+        $this->assertStringContainsString('7. Senin, 9 November 2026', $reply);
+        $this->assertStringContainsString('  • Belum ada laporan.', $reply);
+        $this->assertStringContainsString('      Cek jaringan', $reply);
+        $this->assertStringContainsString('      Perbaiki perangkat', $reply);
+        $this->assertStringContainsString('    - Kendala: Menunggu kabel', $reply);
+        $this->assertStringContainsString('Tugas akhir pekan', $reply);
+        $this->assertStringNotContainsString('Minggu, 8 November', $reply);
+        $this->assertStringNotContainsString('Rahasia pegawai lain', $reply);
+        $this->assertSame(22, preg_match_all('/^\d+\. /m', $reply));
+        $this->assertLessThan(strpos($reply,'Tugas akhir pekan'), strpos($reply,'Cek jaringan'));
+
+        DB::table('report_groups')->insert(['jid'=>'123@g.us']);
+        $this->send(['text'=>'/laporan November 2026','group'=>'123@g.us'])->assertOk()->assertSee('Tugas akhir pekan');
+        $this->send(['text'=>'/laporan November 2026','group'=>'456@g.us'])->assertNoContent();
+        $this->send(['text'=>'/laporan November 2026','phone'=>'628550000000'])->assertNoContent();
+        $this->send(['text'=>'/laporan Foo 2026'])->assertOk()->assertSee('Bulan atau tahun tidak valid');
+        $this->assertStringContainsString('Gunakan /laporan BULAN TAHUN', $this->send(['text'=>'/laporan'])->assertOk()->json('reply'));
+    }
     public function test_private_account_menu_and_selection():void
     {
         $id=DB::table('office_accounts')->insertGetId(['label'=>'Office Uji','username'=>encrypt('dummy-user',false),'password'=>encrypt('dummy-pass',false),'created_at'=>now(),'updated_at'=>now()]);

@@ -13,6 +13,7 @@
             <tr><td><code>/halo</code></td><td>Melihat menu singkat.</td></tr>
             <tr><td><code>/tutorial</code></td><td>Membaca panduan laporan langsung di WhatsApp.</td></tr>
             <tr><td>Uraian pekerjaan</td><td>Menyimpan laporan harian dengan kehadiran <strong>Masuk</strong>. Jika tanggal lengkap tidak ditulis, bot memakai tanggal pesan dalam WIB.</td></tr>
+            <tr><td><code>/laporan November 2026</code></td><td>Melihat laporan sendiri dari awal hingga akhir bulan. Hari kerja tanpa laporan ditampilkan; Sabtu dan Minggu tampil jika ada laporan.</td></tr>
             <tr><td><code>/cuti 25 nov 2026</code><br><code>/izin 25 nov 2026</code><br><code>/sakit 25 nov 2026</code></td><td>Mencatat status kehadiran pada tanggal yang disebutkan.</td></tr>
             <tr><td><code>/pdf</code><br><code>/pdf 2026-11</code></td><td>Mengunduh PDF laporan sendiri untuk bulan berjalan atau bulan yang dipilih. Gunakan di chat pribadi.</td></tr>
             <tr><td><code>/akun</code><br><code>/akun drive</code></td><td>Menampilkan daftar Clipboard Akun atau mencari berdasarkan nama. Balas nomor dalam daftar untuk membuka detail. Gunakan di chat pribadi.</td></tr>
@@ -43,6 +44,6 @@ Kendala: Menunggu adaptor cadangan
 Keterangan: Perangkat sudah diuji.</pre>
     <p>Baris <strong>Kendala</strong>, <strong>Status</strong>, <strong>Jenis</strong>, dan <strong>Keterangan</strong> dapat ditambahkan bila diperlukan. Kirim satu laporan untuk satu tanggal.</p>
     <h3>Penggunaan di grup</h3>
-    <p>Bot hanya memproses pesan dari grup yang telah diizinkan. Perintah berawalan <code>/</code>, termasuk <code>/halo</code> dan <code>/penting</code>, tidak perlu mention. Untuk uraian laporan biasa, mention akun bot. Permintaan Zoom, PDF, dan detail Clipboard Akun dikerjakan lewat chat pribadi.</p>
+    <p>Bot hanya memproses pesan dari grup yang telah diizinkan. Perintah berawalan <code>/</code>, termasuk <code>/halo</code>, <code>/laporan</code>, dan <code>/penting</code>, tidak perlu mention. Untuk uraian laporan biasa, mention akun bot. Permintaan Zoom, PDF, dan detail Clipboard Akun dikerjakan lewat chat pribadi.</p>
 </section>
 @endsection

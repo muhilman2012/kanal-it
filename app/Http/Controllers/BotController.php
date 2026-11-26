@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\MonthlyReport;
+use App\Services\MonthlyReportChat;
 use App\Services\ReportText;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,7 @@ class BotController extends Controller
         $employee=DB::table('employees')->where('phone',$d['phone'])->where('active',true)->first();
         $group=$d['group']??null;
         $text=trim($d['text']??'');
-        $command=preg_match('~^/(?:halo|zoom|setuju|tolak|akun|tutorial|penting|cuti|izin|sakit|pdf)(?:\s|$)~i',$text);
+        $command=preg_match('~^/(?:halo|zoom|setuju|tolak|akun|tutorial|penting|cuti|izin|sakit|pdf|laporan)(?:\s|$)~i',$text);
         if ($group && ((!$d['mentioned'] && !$command) || !DB::table('report_groups')->where('jid',$group)->exists())) {
             return response()->noContent();
         }
@@ -29,6 +30,7 @@ class BotController extends Controller
                 ? "*Menu Kanal IT Setwapres*\n\n"
                     . "/tutorial — panduan lengkap cara memakai bot.\n"
                     . "Laporan harian — kirim uraian pekerjaan; tanggal yang tidak ditulis akan memakai hari ini.\n"
+                    . "/laporan BULAN TAHUN — lihat daftar laporan bulanan Anda, misalnya /laporan November 2026.\n"
                     . "/cuti, /izin, /sakit — catat kehadiran dengan tanggal lengkap.\n"
                     . "/pdf — unduh laporan bulanan sendiri lewat chat pribadi.\n"
                     . "/akun — cari dan buka Clipboard Akun lewat chat pribadi.\n"
@@ -48,6 +50,9 @@ class BotController extends Controller
             return response()->json(\App\Services\ZoomChat::handle($d['phone'],$text,$d['id'],$d['timestamp']));
         }
         if (!$employee) return response()->noContent();
+        if (preg_match('~^/laporan(?:\s|$)~i',$text)) {
+            return response()->json(['reply'=>MonthlyReportChat::forEmployee($employee,$text)]);
+        }
         if (preg_match('~^/akun(?:\s+(.*))?$~isu',$text,$match)) {
             if ($group) return response()->json(['reply'=>'Kirim /akun lewat chat pribadi ke bot.']);
             $query=DB::table('office_accounts')->orderBy('label')->orderBy('id');
@@ -94,6 +99,9 @@ Tanggal dan rincian tambahan bersifat opsional. Tanpa tanggal lengkap, bot memak
 *PDF pribadi* — kirim lewat chat pribadi:
 /pdf untuk bulan ini
 /pdf 2026-11 untuk November 2026
+
+*Daftar laporan bulanan*
+Kirim /laporan November 2026 untuk melihat laporan Anda urut tanggal. Hari kerja tanpa laporan tetap ditampilkan; Sabtu dan Minggu tampil jika ada laporan.
 
 *Akun (chat pribadi)*
 Kirim /akun atau /akun diikuti nama akun. Balas angka sesuai daftar untuk melihat username dan password.
