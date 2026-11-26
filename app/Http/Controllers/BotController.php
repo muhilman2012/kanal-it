@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\MonthlyReport;
 use App\Services\MonthlyReportChat;
 use App\Services\ReportText;
+use App\Services\SavedReportReply;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -135,6 +136,6 @@ GUIDE
         DB::table('daily_reports')->insertOrIgnore($data+['employee_id'=>$employee->id,'author'=>$employee->name,
             'message_id'=>$d['id'],'created_at'=>now(),'updated_at'=>now()]);
         $row=DB::table('daily_reports')->where('message_id',$d['id'])->where('employee_id',$employee->id)->firstOrFail();
-        return response()->json(['reply'=>'Tersimpan · '.($data['attendance']??'Masuk').' · '.$employee->name.' · '.\Carbon\Carbon::parse($row->report_date)->format('d/m/Y').' · Laporan #'.$row->id]);
+        return response()->json(['reply'=>SavedReportReply::format($row,$employee->name)]);
     }
 }

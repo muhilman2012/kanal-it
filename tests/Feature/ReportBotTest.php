@@ -102,8 +102,13 @@ class ReportBotTest extends TestCase
     public function test_dates_and_duplicate_messages():void
     {
         $d=['text'=>"Tanggal: 05 Oktober 2026\n1. Cek jaringan\n2. Cek server\nKehadiran: Masuk\nStatus: Selesai\nJenis: Permintaan"];
-        $this->send($d)->assertOk();
-        $this->send($d)->assertOk();
+        $reply=$this->send($d)->assertOk()->json('reply');
+        $this->assertStringStartsWith("*Tersimpan*\n\nTanggal Laporan: 5 Oktober 2026", $reply);
+        $this->assertStringContainsString("Nama Pegawai: Pegawai Uji\n\nStatus Kehadiran: Masuk", $reply);
+        $this->assertStringContainsString("Detail Laporan:\n- Cek jaringan\n- Cek server", $reply);
+        $this->assertStringContainsString("Status Pekerjaan: Selesai", $reply);
+        $this->assertStringNotContainsString('Laporan #', $reply);
+        $this->assertSame($reply, $this->send($d)->assertOk()->json('reply'));
         $this->assertDatabaseCount('daily_reports',1);
         $this->assertDatabaseHas('daily_reports',['report_date'=>'2026-10-05','progress'=>'Selesai','attendance'=>'Masuk','initiative'=>'Permintaan','body'=>"1. Cek jaringan\n2. Cek server"]);
         $t=strtotime('2026-11-22T18:00:00Z');
@@ -113,6 +118,18 @@ class ReportBotTest extends TestCase
         foreach (['31/02/2026 cek perangkat','23/10/2026 dan 26/10/2026 cek server','halo',''] as $text)
             $this->send(['text'=>$text,'id'=>'bad'])->assertOk()->assertJsonStructure(['reply']);
         $this->assertDatabaseCount('daily_reports',1);
+    }
+    public function test_saved_report_reply_handles_obstacle_and_absence_without_activity():void
+    {
+        $reply=$this->send(['text'=>"26 November 2026\n- Periksa perangkat\n• Uji koneksi\nKendala: Menunggu adaptor",'id'=>'work'])->assertOk()->json('reply');
+        $this->assertStringContainsString("Tanggal Laporan: 26 November 2026", $reply);
+        $this->assertStringContainsString("Detail Laporan:\n- Periksa perangkat\n- Uji koneksi", $reply);
+        $this->assertStringContainsString("Kendala: Menunggu adaptor", $reply);
+
+        $absence=$this->send(['text'=>'/cuti 25 nov 2026','id'=>'leave'])->assertOk()->json('reply');
+        $this->assertStringContainsString("Tanggal Laporan: 25 November 2026", $absence);
+        $this->assertStringContainsString("Status Kehadiran: Cuti", $absence);
+        $this->assertStringContainsString("Detail Laporan:\n- Tidak ada uraian aktivitas.", $absence);
     }
     public function test_pdf_is_private_employee_scoped_and_admin_export_works():void
     {
