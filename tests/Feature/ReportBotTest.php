@@ -22,6 +22,25 @@ class ReportBotTest extends TestCase
     {
         return $this->withToken('testing')->postJson('/api/laporan/masuk',array_replace($this->message,$changes));
     }
+    public function test_halo_shows_employee_menu_and_zoom_only_for_other_numbers():void
+    {
+        $this->send(['text'=>'/halo'])->assertOk()
+            ->assertSee('/akun')->assertSee('/pdf')->assertSee('/penting')
+            ->assertSee('/zoom')->assertSee('/tutorial');
+        $outside='628330000000';
+        $this->send(['phone'=>$outside,'text'=>'/halo'])->assertOk()->assertSee('/zoom')
+            ->assertDontSee('/akun')->assertDontSee('/pdf')->assertDontSee('/penting');
+        $this->send(['phone'=>$outside,'text'=>'/akun'])->assertNoContent();
+        $this->send(['phone'=>$outside,'text'=>'Laporan pekerjaan'])->assertNoContent();
+        $this->send(['phone'=>$outside,'text'=>'/zoom'])->assertOk()->assertSee('Tanggal kegiatan');
+        $this->send(['phone'=>$outside,'text'=>'2026-12-01'])->assertOk()->assertSee('Jam mulai');
+        $this->assertDatabaseCount('daily_reports',0);
+        DB::table('report_groups')->insert(['jid'=>'123@g.us']);
+        $this->send(['phone'=>$outside,'group'=>'123@g.us','text'=>'/halo'])->assertOk()
+            ->assertSee('/zoom')->assertDontSee('/akun');
+        $this->send(['phone'=>$outside,'group'=>'456@g.us','text'=>'/halo'])->assertNoContent();
+        $this->send(['group'=>'123@g.us','text'=>'/halo'])->assertOk()->assertSee('/akun');
+    }
     public function test_private_account_menu_and_selection():void
     {
         $id=DB::table('office_accounts')->insertGetId(['label'=>'Office Uji','username'=>encrypt('dummy-user',false),'password'=>encrypt('dummy-pass',false),'created_at'=>now(),'updated_at'=>now()]);

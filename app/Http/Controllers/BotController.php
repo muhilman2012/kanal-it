@@ -19,12 +19,31 @@ class BotController extends Controller
         $approver=DB::table('zoom_approvers')->where('phone',$d['phone'])->where('active',true)->exists();
         $employee=DB::table('employees')->where('phone',$d['phone'])->where('active',true)->first();
         $group=$d['group']??null;
-        $command=preg_match('~^/(?:zoom|setuju|tolak|akun|tutorial|penting|cuti|izin|sakit|pdf)(?:\s|$)~i',trim($d['text']??''));
-        if ((!$employee && !$approver) || ($group && ((!$d['mentioned'] && !$command) || !DB::table('report_groups')->where('jid',$group)->exists()))) {
+        $text=trim($d['text']??'');
+        $command=preg_match('~^/(?:halo|zoom|setuju|tolak|akun|tutorial|penting|cuti|izin|sakit|pdf)(?:\s|$)~i',$text);
+        if ($group && ((!$d['mentioned'] && !$command) || !DB::table('report_groups')->where('jid',$group)->exists())) {
             return response()->noContent();
         }
-        $text=trim($d['text']??'');
-        if (preg_match('~^/(zoom|setuju|tolak|batal)(?:\s|$)~i',$text) || (!$group && \Illuminate\Support\Facades\Cache::has('zoom-draft:'.$d['phone']))) {
+        if (strcasecmp($text, '/halo') === 0) {
+            $menu = $employee
+                ? "*Menu Kanal IT Setwapres*\n\n"
+                    . "/tutorial — panduan lengkap cara memakai bot.\n"
+                    . "Laporan harian — kirim uraian pekerjaan; tanggal yang tidak ditulis akan memakai hari ini.\n"
+                    . "/cuti, /izin, /sakit — catat kehadiran dengan tanggal lengkap.\n"
+                    . "/pdf — unduh laporan bulanan sendiri lewat chat pribadi.\n"
+                    . "/akun — cari dan buka Clipboard Akun lewat chat pribadi.\n"
+                    . "/penting — lihat postingan dan informasi penting.\n"
+                    . "/zoom — ajukan permintaan ruang Zoom lewat chat pribadi.\n\n"
+                    . "Di grup yang diizinkan, perintah berawalan / dapat dikirim tanpa mention bot."
+                : "*Menu Kanal IT Setwapres*\n\n"
+                    . "/zoom — ajukan permintaan ruang Zoom lewat chat pribadi.\n\n"
+                    . "Kirim /zoom langsung ke chat pribadi bot untuk memulai.";
+            return response()->json(['reply'=>$menu]);
+        }
+        $zoomCommand=preg_match('~^/(zoom|setuju|tolak|batal)(?:\s|$)~i',$text);
+        $zoomDraft=!$group && \Illuminate\Support\Facades\Cache::has('zoom-draft:'.$d['phone']);
+        if (!$employee && !$approver && !preg_match('~^/zoom(?:\s|$)~i',$text) && !$zoomDraft) return response()->noContent();
+        if ($zoomCommand || $zoomDraft) {
             if ($group) return response()->json(['reply'=>'Permintaan dan persetujuan Zoom melalui chat pribadi bot.']);
             return response()->json(\App\Services\ZoomChat::handle($d['phone'],$text,$d['id'],$d['timestamp']));
         }
@@ -82,7 +101,7 @@ Kirim /akun atau /akun diikuti nama akun. Balas angka sesuai daftar untuk meliha
 *Postingan penting*
 Kirim /penting untuk melihat daftar. Lalu kirim /penting 3 untuk membuka postingan nomor 3. Ganti angka sesuai daftar.
 
-Kirim /tutorial untuk melihat panduan ini lagi. Di grup, perintah berawalan / dapat dikirim tanpa mention.
+Kirim /halo untuk melihat menu singkat, atau /tutorial untuk melihat panduan ini lagi. Di grup, perintah berawalan / dapat dikirim tanpa mention.
 GUIDE
             ]);
         }
