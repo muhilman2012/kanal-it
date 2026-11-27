@@ -17,6 +17,9 @@ Route::middleware('guest')->group(function () {
 Route::get('/layar-lobby/{token}', [LobbyPlayer::class, 'show'])->where('token', '[a-f0-9]{48}');
 Route::get('/layar-lobby/{token}/playlist', [LobbyPlayer::class, 'playlist'])->where('token', '[a-f0-9]{48}');
 Route::get('/layar-lobby/{token}/media/{item}', [LobbyPlayer::class, 'media'])->where('token', '[a-f0-9]{48}')->whereNumber('item');
+Route::get('/tv/{token}', [LobbyPlayer::class, 'show'])->where('token', '[A-Za-z2-9]{8}');
+Route::get('/tv/{token}/playlist', [LobbyPlayer::class, 'playlist'])->where('token', '[A-Za-z2-9]{8}');
+Route::get('/tv/{token}/media/{item}', [LobbyPlayer::class, 'media'])->where('token', '[A-Za-z2-9]{8}')->whereNumber('item');
 
 Route::middleware(['auth', 'auth.session', 'menu:portal', 'cache.headers:no_store;private'])->group(function () {
     Route::middleware('menu:lobby')->group(function () {

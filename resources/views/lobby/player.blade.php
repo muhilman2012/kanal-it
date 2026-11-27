@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="/lobby-player.css">
     <script defer src="/lobby-player.js"></script>
 </head>
-<body data-playlist-url="/layar-lobby/{{ $token }}/playlist">
+<body data-playlist-url="{{ $basePath }}/playlist">
     <main id="stage" aria-live="off">
         <div class="waiting"><img src="/setneg.png" alt="" width="96" height="96"><h1>{{ $screen->name }}</h1><p>Menyiapkan tayangan…</p></div>
     </main>

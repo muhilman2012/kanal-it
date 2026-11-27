@@ -33,6 +33,7 @@ class LobbyController extends Controller
             $screen = new LobbyScreen([
                 'token_hash' => hash('sha256', $token),
                 'token_encrypted' => $token,
+                'short_code' => LobbyScreen::newShortCode(),
             ]);
         }
         $screen->fill($data + ['active' => $request->boolean('active')])->save();
@@ -42,7 +43,11 @@ class LobbyController extends Controller
     public function rotateToken(LobbyScreen $screen)
     {
         $token = bin2hex(random_bytes(24));
-        $screen->update(['token_hash' => hash('sha256', $token), 'token_encrypted' => $token]);
+        $screen->update([
+            'token_hash' => hash('sha256', $token),
+            'token_encrypted' => $token,
+            'short_code' => LobbyScreen::newShortCode(),
+        ]);
         return back()->with('status', 'Alamat layar diperbarui. Buka URL baru pada perangkat TV.');
     }
 

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class LobbyScreen extends Model
 {
-    protected $fillable = ['name', 'location', 'token_hash', 'token_encrypted', 'active', 'last_seen_at'];
+    protected $fillable = ['name', 'location', 'token_hash', 'token_encrypted', 'short_code', 'active', 'last_seen_at'];
 
     protected function casts(): array
     {
@@ -24,6 +24,16 @@ class LobbyScreen extends Model
 
     public function playerUrl(): string
     {
-        return rtrim(config('app.url'), '/').'/layar-lobby/'.$this->token_encrypted;
+        return rtrim(config('app.url'), '/').'/tv/'.$this->short_code;
+    }
+
+    public static function newShortCode(): string
+    {
+        $alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+        do {
+            $code = '';
+            for ($i = 0; $i < 8; $i++) $code .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+        } while (self::where('short_code', $code)->exists());
+        return $code;
     }
 }

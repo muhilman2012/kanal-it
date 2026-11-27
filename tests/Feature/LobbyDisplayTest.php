@@ -41,16 +41,24 @@ class LobbyDisplayTest extends TestCase
         $screen = LobbyScreen::firstOrFail();
         $this->assertSame(48, strlen($screen->token_encrypted));
         $this->assertNotSame($screen->token_encrypted, $screen->getRawOriginal('token_encrypted'));
+        $this->assertMatchesRegularExpression('~^.{8}$~', $screen->short_code);
+        $this->assertStringEndsWith('/tv/'.$screen->short_code, $screen->playerUrl());
         $this->get('/lobby')->assertOk()->assertSee('Lobby Utama');
         $this->get('/layar-lobby/'.$screen->token_encrypted)->assertOk()->assertSee('lobby-player.js');
+        $this->get('/tv/'.$screen->short_code)->assertOk()->assertSee('/tv/'.$screen->short_code.'/playlist');
+        $this->getJson('/tv/'.$screen->short_code.'/playlist')->assertOk()->assertJsonCount(0, 'items');
         $this->getJson('/layar-lobby/'.$screen->token_encrypted.'/playlist')->assertOk()->assertJsonCount(0, 'items');
         $this->get('/layar-lobby/'.str_repeat('a',48))->assertNotFound();
 
         $oldToken = $screen->token_encrypted;
+        $oldCode = $screen->short_code;
         $this->post('/lobby/screens/'.$screen->id.'/rotate')->assertRedirect();
         $screen->refresh();
         $this->assertNotSame($oldToken, $screen->token_encrypted);
+        $this->assertNotSame($oldCode, $screen->short_code);
         $this->get('/layar-lobby/'.$oldToken)->assertNotFound();
+        $this->get('/tv/'.$oldCode)->assertNotFound();
+        $this->get('/tv/'.$screen->short_code)->assertOk();
         $this->get('/layar-lobby/'.$screen->token_encrypted)->assertOk();
         $this->put('/lobby/screens/'.$screen->id, ['name'=>'Lobby Utama','active'=>0])->assertRedirect();
         $this->get('/layar-lobby/'.$screen->token_encrypted)->assertNotFound();
@@ -88,6 +96,9 @@ class LobbyDisplayTest extends TestCase
         $playlist = $this->getJson('/layar-lobby/'.$first->token_encrypted.'/playlist')->assertOk()->json('items');
         $this->assertSame(['image','website'],array_column($playlist,'kind'));
         $this->assertSame('https://example.org/',$playlist[1]['url']);
+        $shortPlaylist = $this->getJson('/tv/'.$first->short_code.'/playlist')->assertOk()->json('items');
+        $this->assertSame('/tv/'.$first->short_code.'/media/'.$items[0]->id, $shortPlaylist[0]['url']);
+        $this->get($shortPlaylist[0]['url'])->assertOk()->assertHeader('Content-Type','image/png');
         $this->get('/layar-lobby/'.$first->token_encrypted.'/media/'.$items[0]->id)->assertOk()->assertHeader('Content-Type','image/png');
         $this->get('/layar-lobby/'.$second->token_encrypted.'/media/'.$items[0]->id)->assertNotFound();
         $this->post('/lobby/screens/'.$first->id.'/items/'.$items[1]->id.'/move',['direction'=>'up'])->assertRedirect();

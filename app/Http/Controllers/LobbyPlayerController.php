@@ -11,14 +11,17 @@ class LobbyPlayerController extends Controller
 {
     private function screen(string $token): LobbyScreen
     {
-        return LobbyScreen::where('token_hash', hash('sha256', $token))
+        return (strlen($token) === 8
+            ? LobbyScreen::where('short_code', strtoupper($token))
+            : LobbyScreen::where('token_hash', hash('sha256', $token)))
             ->where('active', true)->firstOrFail();
     }
 
     public function show(string $token)
     {
         $screen = $this->screen($token);
-        return response()->view('lobby.player', compact('screen', 'token'))
+        $basePath = strlen($token) === 8 ? '/tv/'.$token : '/layar-lobby/'.$token;
+        return response()->view('lobby.player', compact('screen', 'basePath'))
             ->header('Cache-Control', 'no-store')
             ->header('Referrer-Policy', 'no-referrer')
             ->header('X-Robots-Tag', 'noindex, nofollow')
@@ -33,7 +36,7 @@ class LobbyPlayerController extends Controller
             $screen->update(['last_seen_at' => now()]);
         }
         $items = LobbySchedule::playlist($screen->items()->orderBy('sort_order')->orderBy('id')->get(), $now);
-        $base = '/layar-lobby/'.$token.'/media/';
+        $base = (strlen($token) === 8 ? '/tv/' : '/layar-lobby/').$token.'/media/';
         $entries = array_map(fn ($item) => [
             'id' => $item->id,
             'kind' => $item->kind === 'webshot' ? 'image' : $item->kind,

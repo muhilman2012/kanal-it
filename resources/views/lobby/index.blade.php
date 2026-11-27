@@ -21,9 +21,9 @@
         @if($selected)
             <section class="card">
                 <div class="heading"><div><h2>{{ $selected->name }}</h2><p>{{ $selected->location ?: 'Lokasi belum diisi' }} · {{ $selected->active ? 'Aktif' : 'Nonaktif' }}</p></div><div class="actions"><button data-open="screen-edit">Edit layar</button><a href="{{ $selected->playerUrl() }}" target="_blank" rel="noopener noreferrer">Buka player</a></div></div>
-                <label>Alamat layar untuk browser TV<input readonly value="{{ $selected->playerUrl() }}" aria-label="Alamat layar lobby"></label>
+                <label>Alamat pendek untuk browser TV<input readonly value="{{ $selected->playerUrl() }}" aria-label="Alamat layar lobby"></label>
                 <div class="actions"><button type="button" data-user="{{ $selected->playerUrl() }}">Salin alamat</button><form method="post" action="/lobby/screens/{{ $selected->id }}/rotate" onsubmit="return confirm('URL lama pada TV akan berhenti berfungsi. Buat URL baru?')">@csrf<button>Ganti token akses</button></form></div>
-                <p class="small" style="margin-top:12px">Simpan alamat ini pada browser TV. Player berjalan penuh layar dan memperbarui playlist otomatis. Tekan F11 pada perangkat untuk mode kiosk browser.</p>
+                <p class="small" style="margin-top:12px">Ketik kode 8 karakter pada TV atau salin alamat ini. Alamat lama tetap berlaku sampai token akses diganti. Player memperbarui playlist otomatis. Tekan F11 untuk mode layar penuh. Video dimulai tanpa suara; tekan Aktifkan suara pada player TV agar video berikutnya bersuara.</p>
             </section>
 
             <section class="heading" style="margin-top:28px"><div><h2>Urutan tayangan</h2><p>{{ count($playing) }} tayangan aktif sekarang · {{ $now->format('d/m/Y H:i') }} WIB</p></div><button class="primary" data-open="item-add">Tambah tayangan</button></section>
