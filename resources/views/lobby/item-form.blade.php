@@ -1,10 +1,11 @@
 <form method="post" enctype="multipart/form-data" action="/lobby/screens/{{ $screen->id }}/items{{ $item ? '/'.$item->id : '' }}">@csrf @if($item)@method('put')@endif
 <label>Judul tayangan<input name="title" value="{{ $item?->title }}" maxlength="150" required></label>
-<label>Jenis materi<select name="kind" required><option value="image" @selected(!$item || $item->kind === 'image')>Gambar</option><option value="video" @selected($item?->kind === 'video')>Video</option><option value="website" @selected($item?->kind === 'website')>Laman web</option></select></label>
+<label>Jenis materi<select name="kind" required><option value="image" @selected(!$item || $item->kind === 'image')>Gambar</option><option value="video" @selected($item?->kind === 'video')>Video</option><option value="website" @selected($item?->kind === 'website')>Laman web langsung</option><option value="webshot" @selected($item?->kind === 'webshot')>Laman web (tangkapan layar)</option></select></label>
 <label>Unggah gambar atau video<input type="file" name="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm"></label>
 <p class="small">Gambar JPG, PNG, GIF, WebP atau video MP4, WebM. Maksimal 300 MB. Saat mengedit, biarkan kosong untuk mempertahankan berkas lama dengan jenis yang sama.</p>
 <label>URL laman web HTTPS<input type="url" name="website_url" value="{{ $item?->website_url }}" placeholder="https://contoh.go.id/halaman"></label>
-<p class="small">Laman web harus mengizinkan tampil di iframe. Beberapa situs memblokir penyematan meskipun URL dapat dibuka langsung.</p>
+<p class="small">Mode langsung membutuhkan izin iframe dari situs. Mode tangkapan layar menampilkan gambar statis halaman dan dapat digunakan untuk situs yang memblokir iframe; interaksi dan video situs tidak ikut tampil.</p>
+<label>Perbarui tangkapan layar setiap (menit)<input type="number" name="snapshot_interval_minutes" min="5" max="1440" value="{{ $item?->snapshot_interval_minutes ?? 15 }}"></label>
 <label>Penyesuaian gambar/video<select name="fit"><option value="contain" @selected(!$item || $item->fit === 'contain')>Utuh, mungkin ada ruang kosong</option><option value="cover" @selected($item?->fit === 'cover')>Memenuhi layar, tepi mungkin terpotong</option></select></label>
 <label>Durasi tayang (detik)<input type="number" name="duration_seconds" min="0" max="3600" value="{{ $item?->duration_seconds ?? 15 }}" required></label>
 <p class="small">Untuk video, isi 0 agar lanjut setelah video selesai. Gambar dan laman web harus lebih dari 0 detik.</p>

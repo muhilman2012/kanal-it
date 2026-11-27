@@ -36,8 +36,8 @@ class LobbyPlayerController extends Controller
         $base = '/layar-lobby/'.$token.'/media/';
         $entries = array_map(fn ($item) => [
             'id' => $item->id,
-            'kind' => $item->kind,
-            'url' => $item->kind === 'website' ? $item->website_url : $base.$item->id,
+            'kind' => $item->kind === 'webshot' ? 'image' : $item->kind,
+            'url' => $item->kind === 'website' ? $item->website_url : $base.$item->id.($item->kind === 'webshot' ? '?v='.$item->snapshot_at?->timestamp : ''),
             'fit' => $item->fit,
             'duration' => $item->duration_seconds,
         ], $items);
@@ -54,12 +54,12 @@ class LobbyPlayerController extends Controller
     {
         $screen = $this->screen($token);
         $row = $screen->items()->where('id', $item)->where('active', true)->firstOrFail();
-        abort_unless(in_array($row->kind, ['image', 'video'], true) && is_string($row->file_path)
+        abort_unless(in_array($row->kind, ['image', 'video', 'webshot'], true) && is_string($row->file_path)
             && $row->file_path === basename($row->file_path), 404);
         $path = config('lobby.media_path').DIRECTORY_SEPARATOR.$row->file_path;
         abort_unless(is_file($path), 404);
         $type = mime_content_type($path);
-        abort_unless(str_starts_with($type, $row->kind.'/'), 404);
+        abort_unless($row->kind === 'webshot' ? $type === 'image/png' : str_starts_with($type, $row->kind.'/'), 404);
         return response()->file($path, [
             'Content-Type' => $type,
             'Cache-Control' => 'private, max-age=3600',

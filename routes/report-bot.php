@@ -1,6 +1,12 @@
 <?php
+
+use App\Http\Controllers\LobbyCaptureController;
 use App\Http\Controllers\BotController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/lobby/capture', [LobbyCaptureController::class, 'due']);
+Route::post('/lobby/capture/{item}', [LobbyCaptureController::class, 'store']);
+Route::post('/lobby/capture/{item}/failed', [LobbyCaptureController::class, 'failed']);
 
 Route::post('/laporan/masuk',[BotController::class,'receive']);
 Route::get('/zoom/outbox',function(\Illuminate\Http\Request $request){

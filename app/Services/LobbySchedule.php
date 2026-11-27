@@ -10,6 +10,7 @@ class LobbySchedule
     public static function active(LobbyItem $item, CarbonImmutable $now): bool
     {
         if (!$item->active) return false;
+        if ($item->kind === 'webshot' && (!$item->file_path || !is_file(config('lobby.media_path').DIRECTORY_SEPARATOR.$item->file_path))) return false;
         if ($item->mode === 'always') return true;
         if ($item->mode !== 'scheduled') return false;
 

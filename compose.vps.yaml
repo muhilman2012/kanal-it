@@ -32,6 +32,17 @@ services:
     volumes:
       - botstate:/opt/kanal/storage/app/private/report-bot
     shm_size: 256mb
+  capture:
+    build: ./bot
+    init: true
+    restart: unless-stopped
+    depends_on:
+      web: {condition: service_healthy}
+    environment:
+      LOBBY_CAPTURE_API: http://web/api/lobby/capture
+      LOBBY_CAPTURE_TOKEN: ${LOBBY_CAPTURE_TOKEN}
+    command: ["node", "capture.js"]
+    shm_size: 256mb
 volumes:
   data:
   botstate:

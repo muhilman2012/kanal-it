@@ -130,4 +130,39 @@ class LobbyDisplayTest extends TestCase
         ])->assertSessionHasErrors('file');
         $this->assertDatabaseCount('lobby_items',0);
     }
+
+    public function test_webshot_is_hidden_until_worker_uploads_image_and_then_refreshes(): void
+    {
+        config(['lobby.capture_token' => str_repeat('t', 64)]);
+        $this->actingAs(User::factory()->create());
+        $this->post('/lobby/screens', ['name' => 'TV Lobby', 'active' => 1]);
+        $screen = LobbyScreen::firstOrFail();
+        $this->post('/lobby/screens/'.$screen->id.'/items', [
+            'title' => 'Berita', 'kind' => 'webshot', 'website_url' => 'https://www.detik.com/',
+            'snapshot_interval_minutes' => 15, 'fit' => 'cover',
+            'duration_seconds' => 20, 'mode' => 'always', 'active' => 1,
+        ])->assertRedirect();
+        $item = LobbyItem::firstOrFail();
+        $this->getJson('/layar-lobby/'.$screen->token_encrypted.'/playlist')->assertJsonCount(0, 'items');
+        $this->getJson('/api/lobby/capture')->assertForbidden();
+        $headers = ['Authorization' => 'Bearer '.str_repeat('t', 64)];
+        $due = $this->withHeaders($headers)->getJson('/api/lobby/capture')->assertOk()->json('item');
+        $this->assertSame($item->id, $due['id']);
+        $this->assertSame('https://www.detik.com/', $due['url']);
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6V2sAAAAASUVORK5CYII=');
+        $this->withHeaders($headers)->post('/api/lobby/capture/'.$item->id, [
+            'image' => UploadedFile::fake()->createWithContent('capture.png', $png),
+        ])->assertOk();
+        $item->refresh();
+        $firstPath = $item->file_path;
+        $this->assertFileExists($this->mediaPath.'/'.$firstPath);
+        $playlist = $this->getJson('/layar-lobby/'.$screen->token_encrypted.'/playlist')->assertOk()->json('items');
+        $this->assertSame('image', $playlist[0]['kind']);
+        $this->assertStringContainsString('?v=', $playlist[0]['url']);
+        $this->get($playlist[0]['url'])->assertOk()->assertHeader('Content-Type', 'image/png');
+        $this->withHeaders($headers)->post('/api/lobby/capture/'.$item->id, [
+            'image' => UploadedFile::fake()->createWithContent('capture.png', $png),
+        ])->assertOk();
+        $this->assertFileDoesNotExist($this->mediaPath.'/'.$firstPath);
+    }
 }

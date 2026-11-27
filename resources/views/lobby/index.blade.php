@@ -39,10 +39,11 @@
                         </div>
                         <div class="lobby-item-main">
                             <h3>{{ $item->title }}</h3>
-                            <p class="small">{{ ['image'=>'Gambar','video'=>'Video','website'=>'Laman web'][$item->kind] ?? $item->kind }} · {{ $item->duration_seconds ? $item->duration_seconds.' detik' : 'sampai video selesai' }} · {{ $item->fit === 'cover' ? 'Penuhi layar' : 'Tampilkan utuh' }}</p>
+                            <p class="small">{{ ['image'=>'Gambar','video'=>'Video','website'=>'Laman web langsung','webshot'=>'Tangkapan layar web'][$item->kind] ?? $item->kind }} · {{ $item->duration_seconds ? $item->duration_seconds.' detik' : 'sampai video selesai' }} · {{ $item->fit === 'cover' ? 'Penuhi layar' : 'Tampilkan utuh' }}</p>
                             <p class="small">{{ $item->mode === 'always' ? 'Tayang tetap dalam rotasi' : 'Periodik'.($item->exclusive ? ' · Ambil alih playlist' : '') }} · {{ !$item->active ? 'Nonaktif' : (in_array($item->id,$playing) ? 'Sedang masuk playlist' : 'Di luar jadwal') }}</p>
                             @if($item->mode === 'scheduled')<p class="small">Hari: {{ $item->weekdays ? collect($item->weekdays)->map(fn($day) => [1=>'Sen',2=>'Sel',3=>'Rab',4=>'Kam',5=>'Jum',6=>'Sab',7=>'Min'][$day] ?? $day)->join(', ') : 'Setiap hari' }} · Jam: {{ $item->starts_at ?: '00:00' }}–{{ $item->ends_at ?: '24:00' }} WIB · Tanggal: {{ $item->starts_on?->format('d/m/Y') ?: 'bebas' }} s.d. {{ $item->ends_on?->format('d/m/Y') ?: 'bebas' }}</p>@endif
-                            <p class="small">{{ $item->kind === 'website' ? $item->website_url : $item->file_name }}</p>
+                            <p class="small">{{ in_array($item->kind, ['website','webshot']) ? $item->website_url : $item->file_name }}</p>
+                            @if($item->kind === 'webshot')<p class="small">Diperbarui setiap {{ $item->snapshot_interval_minutes }} menit · {{ $item->snapshot_at ? 'Terakhir '.$item->snapshot_at->timezone('Asia/Jakarta')->format('d/m/Y H:i').' WIB' : 'Menunggu tangkapan pertama' }}</p>@if($item->snapshot_error)<p class="small" style="color:#a33131">Gagal mengambil gambar: {{ $item->snapshot_error }}</p>@endif @endif
                         </div>
                         <div class="actions"><button data-open="item-{{ $item->id }}">Edit</button><form method="post" action="/lobby/screens/{{ $selected->id }}/items/{{ $item->id }}" onsubmit="return confirm('Hapus tayangan ini?')">@csrf @method('delete')<button class="danger">Hapus</button></form></div>
                     </article>

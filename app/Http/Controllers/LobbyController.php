@@ -62,13 +62,14 @@ class LobbyController extends Controller
             && (!$item || $item->kind !== $kind || !$item->file_path);
         $data = $request->validate([
             'title' => 'required|string|max:150',
-            'kind' => ['required', Rule::in(['image', 'video', 'website'])],
+            'kind' => ['required', Rule::in(['image', 'video', 'website', 'webshot'])],
             'file' => [
-                $needsFile ? 'required' : 'nullable', 'file',
+                $needsFile ? 'required' : (in_array($kind, ['image', 'video'], true) ? 'nullable' : 'prohibited'), 'file',
                 'mimetypes:image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm',
                 'max:307200',
             ],
-            'website_url' => [$kind === 'website' ? 'required' : 'nullable', 'url:https', 'max:2048'],
+            'website_url' => [in_array($kind, ['website', 'webshot'], true) ? 'required' : 'nullable', 'url:https', 'max:2048'],
+            'snapshot_interval_minutes' => 'nullable|integer|between:5,1440',
             'fit' => ['required', Rule::in(['contain', 'cover'])],
             'duration_seconds' => 'required|integer|min:0|max:3600',
             'mode' => ['required', Rule::in(['always', 'scheduled'])],
@@ -103,7 +104,8 @@ class LobbyController extends Controller
         $values = [
             'title' => $data['title'],
             'kind' => $data['kind'],
-            'website_url' => $kind === 'website' ? $data['website_url'] : null,
+            'website_url' => in_array($kind, ['website', 'webshot'], true) ? $data['website_url'] : null,
+            'snapshot_interval_minutes' => $kind === 'webshot' ? ($data['snapshot_interval_minutes'] ?? 15) : 15,
             'fit' => $data['fit'],
             'duration_seconds' => $data['duration_seconds'],
             'mode' => $data['mode'],
@@ -118,9 +120,24 @@ class LobbyController extends Controller
         if ($newFile) {
             $values['file_path'] = $newFile;
             $values['file_name'] = mb_substr($file->getClientOriginalName(), 0, 240);
-        } elseif ($kind === 'website') {
+        } elseif ($kind !== 'webshot' || $item?->kind !== 'webshot') {
             $values['file_path'] = null;
             $values['file_name'] = null;
+        }
+        if ($kind === 'webshot') {
+            if ($item?->kind !== 'webshot' || $item->website_url !== $data['website_url']) {
+                $values['snapshot_at'] = null;
+                $values['snapshot_error'] = null;
+                $values['snapshot_next_at'] = now();
+                $values['file_path'] = null;
+                $values['file_name'] = null;
+            } elseif ((int) $item->snapshot_interval_minutes !== (int) ($data['snapshot_interval_minutes'] ?? 15)) {
+                $values['snapshot_next_at'] = now();
+            }
+        } else {
+            $values['snapshot_at'] = null;
+            $values['snapshot_next_at'] = null;
+            $values['snapshot_error'] = null;
         }
         $item ??= new LobbyItem([
             'lobby_screen_id' => $screen->id,
