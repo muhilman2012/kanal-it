@@ -2,6 +2,8 @@ const stage = document.querySelector('#stage');
 const playlistUrl = document.body.dataset.playlistUrl;
 const soundButton = document.querySelector('#sound');
 const fullscreenButton = document.querySelector('#fullscreen');
+const controls = document.querySelector('#controls');
+let controlsTimer;
 let items = [];
 let currentId = null;
 let timer = null;
@@ -113,6 +115,31 @@ soundButton.addEventListener('click', () => {
     }
     soundButton.hidden = true;
 });
-fullscreenButton.addEventListener('click', () => document.documentElement.requestFullscreen?.());
+function revealControls() {
+    controls.classList.add('is-visible');
+    clearTimeout(controlsTimer);
+    controlsTimer = setTimeout(() => controls.classList.remove('is-visible'), 2500);
+}
+
+document.addEventListener('pointermove', revealControls);
+document.addEventListener('pointerdown', revealControls);
+document.addEventListener('keydown', revealControls);
+controls.addEventListener('focusin', revealControls);
+document.addEventListener('fullscreenchange', () => {
+    fullscreenButton.hidden = Boolean(document.fullscreenElement);
+    if (document.fullscreenElement) {
+        fullscreenButton.blur();
+        controls.classList.remove('is-visible');
+        clearTimeout(controlsTimer);
+    }
+});
+fullscreenButton.addEventListener('click', async () => {
+    try {
+        await document.documentElement.requestFullscreen?.();
+    } catch {
+        revealControls();
+    }
+});
+revealControls();
 refresh();
 setInterval(refresh, 15000);

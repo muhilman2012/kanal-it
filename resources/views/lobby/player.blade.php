@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <title>{{ $screen->name }} · Layar Lobby</title>
     <link rel="icon" href="/favicon.ico">
-    <link rel="stylesheet" href="/lobby-player.css">
-    <script defer src="/lobby-player.js"></script>
+    <link rel="stylesheet" href="/lobby-player.css?v=controls-2">
+    <script defer src="/lobby-player.js?v=controls-2"></script>
 </head>
 <body data-playlist-url="{{ $basePath }}/playlist">
     <main id="stage" aria-live="off">
