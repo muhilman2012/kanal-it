@@ -146,6 +146,22 @@ class LobbyDisplayTest extends TestCase
         $this->assertDatabaseCount('lobby_items',0);
     }
 
+    public function test_website_can_be_saved_without_image_fit_and_video_needs_upload(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $this->post('/lobby/screens', ['name'=>'TV A','active'=>1]);
+        $screen = LobbyScreen::firstOrFail();
+        $base = ['title'=>'Tayangan','duration_seconds'=>15,'mode'=>'always','active'=>1];
+        $this->post('/lobby/screens/'.$screen->admin_code.'/items', $base + [
+            'kind'=>'website','website_url'=>'https://example.org/',
+        ])->assertRedirect();
+        $this->assertDatabaseHas('lobby_items',['kind'=>'website','fit'=>'contain','website_url'=>'https://example.org/']);
+        $this->post('/lobby/screens/'.$screen->admin_code.'/items', $base + [
+            'kind'=>'video','fit'=>'cover',
+        ])->assertSessionHasErrors('file');
+        $this->assertDatabaseCount('lobby_items',1);
+    }
+
     public function test_webshot_is_hidden_until_worker_uploads_image_and_then_refreshes(): void
     {
         config(['lobby.capture_token' => str_repeat('t', 64)]);
