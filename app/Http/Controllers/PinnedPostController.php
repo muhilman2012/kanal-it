@@ -63,11 +63,12 @@ class PinnedPostController extends Controller
         if (!preg_match('~^/penting(?:\s+halaman\s+([1-9]\d{0,5}))?$~i',$text,$m)) {
             return response()->json(['reply'=>'Kirim /penting atau /penting diikuti nomor postingan.']);
         }
-        $posts=DB::table('pinned_posts')->orderByDesc('id')->simplePaginate(10,['id','title'],'page',(int)($m[1]??1));
+        $posts=DB::table('pinned_posts')->orderBy('id')->simplePaginate(10,['id','title'],'page',(int)($m[1]??1));
         if ($posts->isEmpty()) return response()->json(['reply'=>'Belum ada postingan pada halaman ini.']);
-        $lines=['Postingan penting'];
-        foreach ($posts as $post) $lines[]=$post->id.'. '.$post->title;
-        $lines[]='Kirim /penting '.$posts->first()->id.' untuk membuka postingan tersebut.';
+        $lines=['*Postingan penting*', ''];
+        foreach ($posts as $post) $lines[]='*'.$post->id.'. '.$post->title.'*';
+        $lines[]='';
+        $lines[]='Kirim /penting '.$posts->last()->id.' untuk melihat postingan tersebut.';
         if ($posts->hasMorePages()) $lines[]='Berikutnya: /penting halaman '.($posts->currentPage()+1);
         return response()->json(['reply'=>implode("\n",$lines)]);
     }

@@ -47,6 +47,12 @@ class AttendancePinsTest extends TestCase
         $send($payload)->assertNoContent();
         DB::table('employees')->insert(['name'=>'pegawai uji','phone'=>$payload['phone'],'position'=>'IT']);
         $send($payload)->assertOk()->assertSee('Panduan');
+        DB::table('pinned_posts')->insert([
+            ['title'=>'Watermark 2026','url'=>'https://example.org/watermark','created_at'=>now(),'updated_at'=>now()],
+            ['title'=>'Panduan VPN','url'=>'https://example.org/vpn','created_at'=>now(),'updated_at'=>now()],
+        ]);
+        $this->assertSame("*Postingan penting*\n\n*1. Panduan*\n*2. Watermark 2026*\n*3. Panduan VPN*\n\nKirim /penting 3 untuk melihat postingan tersebut.",
+            $send($payload)->assertOk()->json('reply'));
         $payload['text']='/penting '.$id;
         $send($payload)->assertJsonPath('media.data',base64_encode($bytes))->assertJsonPath('media.name','Panduan.txt');
         $this->assertDatabaseCount('daily_reports',0);
