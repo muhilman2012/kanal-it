@@ -5,6 +5,8 @@ use App\Http\Controllers\ReportAdminController as ReportAdmin;
 use App\Http\Controllers\PinnedPostController as Pins;
 use App\Http\Controllers\ZoomController as Zoom;
 use App\Http\Controllers\AccessController as Access;
+use App\Http\Controllers\LobbyController as Lobby;
+use App\Http\Controllers\LobbyPlayerController as LobbyPlayer;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -12,7 +14,22 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [Portal::class, 'login'])->middleware('throttle:5,1');
 });
 
+Route::get('/layar-lobby/{token}', [LobbyPlayer::class, 'show'])->where('token', '[a-f0-9]{48}');
+Route::get('/layar-lobby/{token}/playlist', [LobbyPlayer::class, 'playlist'])->where('token', '[a-f0-9]{48}');
+Route::get('/layar-lobby/{token}/media/{item}', [LobbyPlayer::class, 'media'])->where('token', '[a-f0-9]{48}')->whereNumber('item');
+
 Route::middleware(['auth', 'auth.session', 'menu:portal', 'cache.headers:no_store;private'])->group(function () {
+    Route::middleware('menu:lobby')->group(function () {
+        Route::get('/lobby', [Lobby::class, 'index']);
+        Route::post('/lobby/screens', [Lobby::class, 'saveScreen']);
+        Route::put('/lobby/screens/{screen}', [Lobby::class, 'saveScreen']);
+        Route::delete('/lobby/screens/{screen}', [Lobby::class, 'deleteScreen']);
+        Route::post('/lobby/screens/{screen}/rotate', [Lobby::class, 'rotateToken']);
+        Route::post('/lobby/screens/{screen}/items', [Lobby::class, 'saveItem']);
+        Route::put('/lobby/screens/{screen}/items/{item}', [Lobby::class, 'saveItem']);
+        Route::delete('/lobby/screens/{screen}/items/{item}', [Lobby::class, 'deleteItem']);
+        Route::post('/lobby/screens/{screen}/items/{item}/move', [Lobby::class, 'moveItem']);
+    });
     Route::get('/akses', [Access::class, 'index'])->middleware('menu:access');
     Route::post('/akses/role', [Access::class, 'saveRole'])->middleware('menu:access');
     Route::put('/akses/role/{id}', [Access::class, 'saveRole'])->middleware('menu:access')->whereNumber('id');

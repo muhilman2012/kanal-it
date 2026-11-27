@@ -19,6 +19,7 @@ class AccessController extends Controller
         'zoom' => 'Permintaan Zoom',
         'pins' => 'Postingan Penting',
         'bot_guide' => 'Panduan Bot WhatsApp',
+        'lobby' => 'Layar Lobby',
     ];
 
     public function index()
