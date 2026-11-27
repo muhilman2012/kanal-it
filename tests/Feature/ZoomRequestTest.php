@@ -99,4 +99,72 @@ class ZoomRequestTest extends TestCase {
   $this->assertDatabaseCount('zoom_request_logs',0);
   $this->assertDatabaseCount('zoom_outbox',0);
  }
+
+ public function test_history_month_filter_and_pdf_export_use_meeting_date():void {
+  $this->actingAs(\App\Models\User::factory()->create());
+  foreach([['date'=>'2026-11-10','agenda'=>'Rapat November'],['date'=>'2026-12-10','agenda'=>'Rapat Desember']] as $row)
+   DB::table('zoom_requests')->insert(['phone'=>'628111111111','requester_name'=>'Pemohon','unit'=>'Biro','agenda'=>$row['agenda'],
+    'starts_at'=>$row['date'].' 09:00:00','ends_at'=>$row['date'].' 10:00:00','participants'=>5,'recording'=>'Tidak',
+    'status'=>'pending','created_at'=>now(),'updated_at'=>now()]);
+  $this->get('/zoom?period=2026-11')->assertOk()->assertSee('Rapat November')->assertDontSee('Rapat Desember');
+  $this->get('/zoom?period=2026-12')->assertOk()->assertSee('Rapat Desember')->assertDontSee('Rapat November');
+  $this->get('/zoom?period=all')->assertOk()->assertSee('Rapat November')->assertSee('Rapat Desember');
+  $pdf=$this->get('/zoom/riwayat.pdf?period=2026-11')->assertOk()->assertHeader('Content-Type','application/pdf');
+  $this->assertStringStartsWith('%PDF-', $pdf->getContent());
+  $this->assertStringContainsString('Riwayat-Permintaan-Zoom-2026-11.pdf',$pdf->headers->get('Content-Disposition'));
+  $this->get('/zoom?period=2026-13')->assertStatus(422);
+ }
+
+ public function test_pending_request_can_be_edited_and_approvers_receive_updated_details():void {
+  $this->actingAs(\App\Models\User::factory()->create());
+  $approver=DB::table('zoom_approvers')->insertGetId(['name'=>'Joko','phone'=>'628111111111','active'=>true,'created_at'=>now(),'updated_at'=>now()]);
+  $account=DB::table('zoom_accounts')->insertGetId(['name'=>'Zoom 1','host_email'=>'zoom@example.test','active'=>true,'created_at'=>now(),'updated_at'=>now()]);
+  $id=DB::table('zoom_requests')->insertGetId(['code'=>'Z-261127-ABC123','phone'=>'628222222222','requester_name'=>'Pemohon',
+   'unit'=>'Biro','agenda'=>'Rapat awal','starts_at'=>'2026-12-01 09:00:00','ends_at'=>'2026-12-01 10:00:00',
+   'participants'=>5,'recording'=>'Tidak','status'=>'pending','created_at'=>now(),'updated_at'=>now()]);
+  DB::table('zoom_outbox')->insert(['zoom_request_id'=>$id,'phone'=>'628111111111','body'=>'Jadwal lama','created_at'=>now(),'updated_at'=>now()]);
+  $this->get('/zoom/'.$id)->assertOk()->assertSee('Edit detail permintaan');
+  $this->put('/zoom/'.$id,[
+   'date'=>'2026-12-02','start'=>'10:00','end'=>'11:00','agenda'=>'Rapat revisi','unit'=>'Biro Baru',
+   'requester_name'=>'Pemohon','email'=>'pic@example.test','participants'=>10,'cohost'=>'Hilman',
+   'recording'=>'Video','notes'=>'Proyektor',
+  ])->assertRedirect('/zoom/'.$id);
+  $this->assertDatabaseHas('zoom_requests',['id'=>$id,'agenda'=>'Rapat revisi','starts_at'=>'2026-12-02 10:00:00','participants'=>10]);
+  $this->assertDatabaseMissing('zoom_outbox',['body'=>'Jadwal lama']);
+  $this->assertStringContainsString('Rapat revisi',DB::table('zoom_outbox')->where('phone','628111111111')->first()->body);
+  $this->assertStringContainsString('Zoom 1',DB::table('zoom_outbox')->where('phone','628111111111')->first()->body);
+  $this->assertDatabaseHas('zoom_request_logs',['zoom_request_id'=>$id,'event'=>'details_updated']);
+  $this->put('/zoom/'.$id,[
+   'date'=>'2026-12-02','start'=>'11:00','end'=>'10:00','agenda'=>'Salah','unit'=>'Biro',
+   'requester_name'=>'Pemohon','participants'=>10,'recording'=>'Video',
+  ])->assertSessionHasErrors('end');
+ }
+
+ public function test_approved_request_updates_zoom_before_local_data():void {
+  $this->actingAs(\App\Models\User::factory()->create());
+  $account=DB::table('zoom_accounts')->insertGetId(['name'=>'Zoom 1','host_email'=>'zoom@example.test',
+   'account_id'=>\Illuminate\Support\Facades\Crypt::encryptString('account'),
+   'client_id'=>\Illuminate\Support\Facades\Crypt::encryptString('client'),
+   'client_secret'=>\Illuminate\Support\Facades\Crypt::encryptString('secret'),
+   'active'=>true,'created_at'=>now(),'updated_at'=>now()]);
+  $id=DB::table('zoom_requests')->insertGetId(['phone'=>'628222222222','requester_name'=>'Pemohon','unit'=>'Biro','agenda'=>'Rapat awal',
+   'starts_at'=>'2026-12-01 09:00:00','ends_at'=>'2026-12-01 10:00:00','participants'=>5,'recording'=>'Tidak',
+   'status'=>'approved','zoom_account_id'=>$account,'zoom_meeting_id'=>'92634297947','join_url'=>'https://zoom.us/j/92634297947',
+   'created_at'=>now(),'updated_at'=>now()]);
+  $payload=['date'=>'2026-12-02','start'=>'10:00','end'=>'11:00','agenda'=>'Rapat revisi','unit'=>'Biro',
+   'requester_name'=>'Pemohon','participants'=>10,'recording'=>'Video'];
+  $allow=false;
+  \Illuminate\Support\Facades\Http::fake(function($request)use(&$allow){
+   return str_contains($request->url(),'oauth/token')
+    ?\Illuminate\Support\Facades\Http::response(['access_token'=>'test-token'])
+    :\Illuminate\Support\Facades\Http::response([],$allow?204:403);
+  });
+  $this->put('/zoom/'.$id,$payload)->assertSessionHasErrors('agenda');
+  $this->assertDatabaseHas('zoom_requests',['id'=>$id,'agenda'=>'Rapat awal']);
+  $allow=true;
+  $this->put('/zoom/'.$id,$payload)->assertRedirect('/zoom/'.$id);
+  $this->assertDatabaseHas('zoom_requests',['id'=>$id,'agenda'=>'Rapat revisi','starts_at'=>'2026-12-02 10:00:00']);
+  \Illuminate\Support\Facades\Http::assertSent(fn($req)=>$req->method()==='PATCH' && str_contains($req->url(),'92634297947'));
+  $this->assertStringContainsString('Rapat revisi',DB::table('zoom_outbox')->where('phone','628222222222')->first()->body);
+ }
 }

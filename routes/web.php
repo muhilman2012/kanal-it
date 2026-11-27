@@ -42,7 +42,9 @@ Route::middleware(['auth', 'auth.session', 'menu:portal', 'cache.headers:no_stor
     Route::delete('/akses/pengguna/{id}', [Access::class, 'deleteUser'])->middleware('menu:access')->whereNumber('id');
     Route::middleware('menu:zoom')->group(function () {
     Route::get('/zoom',[Zoom::class,'index']);
+    Route::get('/zoom/riwayat.pdf',[Zoom::class,'historyPdf']);
     Route::get('/zoom/{id}',[Zoom::class,'show'])->whereNumber('id');
+    Route::put('/zoom/{id}',[Zoom::class,'updateRequest'])->whereNumber('id');
     Route::delete('/zoom/{id}',[Zoom::class,'deleteRequest'])->whereNumber('id');
     Route::post('/zoom/approver',[Zoom::class,'approver']);
     Route::put('/zoom/approver/{id}',[Zoom::class,'approver'])->whereNumber('id');

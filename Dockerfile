@@ -3,6 +3,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3-reportl
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 COPY . .
-RUN chmod -R a+rX app bootstrap config database public resources routes
+RUN chmod -R a+rX app bootstrap config database public resources routes scripts
 RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf && composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader && chown -R www-data:www-data storage bootstrap/cache
 RUN printf 'upload_max_filesize=300M\npost_max_size=310M\nmax_execution_time=120\n' > /usr/local/etc/php/conf.d/lobby-uploads.ini
