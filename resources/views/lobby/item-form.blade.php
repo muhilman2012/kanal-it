@@ -29,5 +29,6 @@
   <label class="checkline"><input type="checkbox" name="exclusive" value="1" @checked($item?->exclusive)> Ambil alih playlist saat jadwal aktif</label>
 </fieldset>
 <label class="checkline"><input type="checkbox" name="active" value="1" @checked(!$item || $item->active)> Tayangan aktif</label>
-<div class="actions"><button class="primary">Simpan tayangan</button><button type="button" data-close>Batal</button></div>
+<div class="actions"><button class="primary" type="submit">Simpan tayangan</button><button type="button" data-close>Batal</button></div>
+<p class="lobby-saving" role="status" aria-live="polite" hidden><span class="loading-spinner" aria-hidden="true"></span> Menyimpan tayangan. Mohon tunggu sampai selesai…</p>
 </form>

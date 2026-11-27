@@ -69,4 +69,29 @@ document.querySelectorAll('[data-lobby-item-form]').forEach(form => {
     updateLobbyItemForm(form);
     form.elements.kind.addEventListener('change', () => updateLobbyItemForm(form));
     form.elements.mode.addEventListener('change', () => updateLobbyItemForm(form));
+    form.addEventListener('submit', event => {
+        if (form.dataset.submitting === '1') {
+            event.preventDefault();
+            return;
+        }
+        form.dataset.submitting = '1';
+        form.setAttribute('aria-busy', 'true');
+        form.querySelectorAll('button').forEach(button => button.disabled = true);
+        form.querySelector('.lobby-saving').hidden = false;
+    });
+});
+
+window.addEventListener('pageshow', () => {
+    document.querySelectorAll('[data-lobby-item-form][data-submitting="1"]').forEach(form => {
+        delete form.dataset.submitting;
+        form.removeAttribute('aria-busy');
+        form.querySelectorAll('button').forEach(button => button.disabled = false);
+        form.querySelector('.lobby-saving').hidden = true;
+    });
+});
+
+document.addEventListener('click', event => {
+    document.querySelectorAll('.main-nav details[open], .menu[open]').forEach(group => {
+        if (!group.contains(event.target)) group.open = false;
+    });
 });
