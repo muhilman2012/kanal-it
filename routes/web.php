@@ -7,6 +7,8 @@ use App\Http\Controllers\ZoomController as Zoom;
 use App\Http\Controllers\AccessController as Access;
 use App\Http\Controllers\LobbyController as Lobby;
 use App\Http\Controllers\LobbyPlayerController as LobbyPlayer;
+use App\Http\Controllers\AnnouncerController as Announcer;
+use App\Http\Controllers\AnnouncerPlayerController as Speaker;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -20,8 +22,21 @@ Route::get('/layar-lobby/{token}/media/{item}', [LobbyPlayer::class, 'media'])->
 Route::get('/tv/{token}', [LobbyPlayer::class, 'show'])->where('token', '[A-Za-z2-9]{8}');
 Route::get('/tv/{token}/playlist', [LobbyPlayer::class, 'playlist'])->where('token', '[A-Za-z2-9]{8}');
 Route::get('/tv/{token}/media/{item}', [LobbyPlayer::class, 'media'])->where('token', '[A-Za-z2-9]{8}')->whereNumber('item');
+Route::get('/speaker/{code}', [Speaker::class, 'show'])->where('code', '[A-Fa-f0-9]{12}');
+Route::get('/speaker/{code}/audio/{schedule}', [Speaker::class, 'audio'])->where('code', '[A-Fa-f0-9]{12}')->whereNumber('schedule');
 
 Route::middleware(['auth', 'auth.session', 'menu:portal', 'cache.headers:no_store;private'])->group(function () {
+    Route::middleware('menu:announcer')->group(function () {
+        Route::get('/pengumuman', [Announcer::class, 'index']);
+        Route::put('/pengumuman/pengaturan', [Announcer::class, 'settings']);
+        Route::post('/pengumuman/ganti-kode', [Announcer::class, 'rotate']);
+        Route::post('/pengumuman/jadwal', [Announcer::class, 'saveSchedule']);
+        Route::put('/pengumuman/jadwal/{id}', [Announcer::class, 'saveSchedule'])->whereNumber('id');
+        Route::delete('/pengumuman/jadwal/{id}', [Announcer::class, 'deleteSchedule'])->whereNumber('id');
+        Route::post('/pengumuman/blast', [Announcer::class, 'blast']);
+        Route::post('/pengumuman/blast/{id}/batal', [Announcer::class, 'cancelBlast'])->whereNumber('id');
+        Route::post('/pengumuman/blast/{id}/ulang', [Announcer::class, 'retryBlast'])->whereNumber('id');
+    });
     Route::middleware('menu:lobby')->group(function () {
         Route::get('/lobby', [Lobby::class, 'index']);
         Route::post('/lobby/screens', [Lobby::class, 'saveScreen']);
