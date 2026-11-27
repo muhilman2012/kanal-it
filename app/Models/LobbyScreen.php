@@ -6,7 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class LobbyScreen extends Model
 {
-    protected $fillable = ['name', 'location', 'token_hash', 'token_encrypted', 'short_code', 'active', 'last_seen_at'];
+    protected $fillable = ['name', 'location', 'token_hash', 'token_encrypted', 'short_code', 'admin_code', 'active', 'last_seen_at'];
+
+    public function getRouteKeyName(): string
+    {
+        return 'admin_code';
+    }
+
+    public static function newAdminCode(): string
+    {
+        do {
+            $code = bin2hex(random_bytes(12));
+        } while (self::where('admin_code', $code)->exists());
+        return $code;
+    }
 
     protected function casts(): array
     {

@@ -15,7 +15,10 @@ class LobbyController extends Controller
     public function index(Request $request)
     {
         $screens = LobbyScreen::withCount('items')->orderBy('name')->get();
-        $selected = $screens->firstWhere('id', (int) $request->query('screen')) ?? $screens->first();
+        $selected = $request->filled('screen')
+            ? $screens->firstWhere('admin_code', $request->query('screen'))
+            : $screens->first();
+        if ($request->filled('screen') && !$selected) return redirect('/lobby');
         $items = $selected?->items()->orderBy('sort_order')->orderBy('id')->get() ?? collect();
         $now = CarbonImmutable::now('Asia/Jakarta');
         $playing = collect(LobbySchedule::playlist($items, $now))->pluck('id')->all();
@@ -34,10 +37,11 @@ class LobbyController extends Controller
                 'token_hash' => hash('sha256', $token),
                 'token_encrypted' => $token,
                 'short_code' => LobbyScreen::newShortCode(),
+                'admin_code' => LobbyScreen::newAdminCode(),
             ]);
         }
         $screen->fill($data + ['active' => $request->boolean('active')])->save();
-        return redirect('/lobby?screen='.$screen->id)->with('status', 'Layar tersimpan.');
+        return redirect('/lobby?screen='.$screen->admin_code)->with('status', 'Layar tersimpan.');
     }
 
     public function rotateToken(LobbyScreen $screen)
@@ -155,7 +159,7 @@ class LobbyController extends Controller
             throw $error;
         }
         if ($oldFile && $oldFile !== $item->file_path) $this->removeFile($oldFile);
-        return redirect('/lobby?screen='.$screen->id)->with('status', 'Tayangan tersimpan.');
+        return redirect('/lobby?screen='.$screen->admin_code)->with('status', 'Tayangan tersimpan.');
     }
 
     public function moveItem(Request $request, LobbyScreen $screen, LobbyItem $item)

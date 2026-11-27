@@ -39,11 +39,15 @@ class LobbyDisplayTest extends TestCase
         $this->actingAs($admin)->post('/lobby/screens', ['name'=>'Lobby Utama','location'=>'Lantai 1','active'=>1])
             ->assertRedirect();
         $screen = LobbyScreen::firstOrFail();
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{24}$/', $screen->admin_code);
         $this->assertSame(48, strlen($screen->token_encrypted));
         $this->assertNotSame($screen->token_encrypted, $screen->getRawOriginal('token_encrypted'));
         $this->assertMatchesRegularExpression('~^.{8}$~', $screen->short_code);
         $this->assertStringEndsWith('/tv/'.$screen->short_code, $screen->playerUrl());
         $this->get('/lobby')->assertOk()->assertSee('Lobby Utama');
+        $this->get('/lobby?screen='.$screen->admin_code)->assertOk()->assertSee('Lobby Utama');
+        $this->get('/lobby?screen='.$screen->id)->assertRedirect('/lobby');
+        $this->put('/lobby/screens/'.$screen->id, ['name'=>'Coba','active'=>1])->assertNotFound();
         $this->get('/layar-lobby/'.$screen->token_encrypted)->assertOk()->assertSee('lobby-player.js');
         $this->get('/tv/'.$screen->short_code)->assertOk()->assertSee('/tv/'.$screen->short_code.'/playlist');
         $this->getJson('/tv/'.$screen->short_code.'/playlist')->assertOk()->assertJsonCount(0, 'items');
@@ -52,7 +56,7 @@ class LobbyDisplayTest extends TestCase
 
         $oldToken = $screen->token_encrypted;
         $oldCode = $screen->short_code;
-        $this->post('/lobby/screens/'.$screen->id.'/rotate')->assertRedirect();
+        $this->post('/lobby/screens/'.$screen->admin_code.'/rotate')->assertRedirect();
         $screen->refresh();
         $this->assertNotSame($oldToken, $screen->token_encrypted);
         $this->assertNotSame($oldCode, $screen->short_code);
@@ -60,7 +64,7 @@ class LobbyDisplayTest extends TestCase
         $this->get('/tv/'.$oldCode)->assertNotFound();
         $this->get('/tv/'.$screen->short_code)->assertOk();
         $this->get('/layar-lobby/'.$screen->token_encrypted)->assertOk();
-        $this->put('/lobby/screens/'.$screen->id, ['name'=>'Lobby Utama','active'=>0])->assertRedirect();
+        $this->put('/lobby/screens/'.$screen->admin_code, ['name'=>'Lobby Utama','active'=>0])->assertRedirect();
         $this->get('/layar-lobby/'.$screen->token_encrypted)->assertNotFound();
     }
 
@@ -82,11 +86,11 @@ class LobbyDisplayTest extends TestCase
         $this->post('/lobby/screens', ['name'=>'TV B','active'=>1]);
         [$first,$second] = LobbyScreen::orderBy('id')->get()->all();
         $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6V2sAAAAASUVORK5CYII=');
-        $this->post('/lobby/screens/'.$first->id.'/items', [
+        $this->post('/lobby/screens/'.$first->admin_code.'/items', [
             'title'=>'Gambar awal','kind'=>'image','file'=>UploadedFile::fake()->createWithContent('slide.png',$png),
             'fit'=>'cover','duration_seconds'=>15,'mode'=>'always','active'=>1,
         ])->assertRedirect();
-        $this->post('/lobby/screens/'.$first->id.'/items', [
+        $this->post('/lobby/screens/'.$first->admin_code.'/items', [
             'title'=>'Website','kind'=>'website','website_url'=>'https://example.org/',
             'fit'=>'contain','duration_seconds'=>20,'mode'=>'always','active'=>1,
         ])->assertRedirect();
@@ -101,10 +105,10 @@ class LobbyDisplayTest extends TestCase
         $this->get($shortPlaylist[0]['url'])->assertOk()->assertHeader('Content-Type','image/png');
         $this->get('/layar-lobby/'.$first->token_encrypted.'/media/'.$items[0]->id)->assertOk()->assertHeader('Content-Type','image/png');
         $this->get('/layar-lobby/'.$second->token_encrypted.'/media/'.$items[0]->id)->assertNotFound();
-        $this->post('/lobby/screens/'.$first->id.'/items/'.$items[1]->id.'/move',['direction'=>'up'])->assertRedirect();
+        $this->post('/lobby/screens/'.$first->admin_code.'/items/'.$items[1]->id.'/move',['direction'=>'up'])->assertRedirect();
         $playlist = $this->getJson('/layar-lobby/'.$first->token_encrypted.'/playlist')->json('items');
         $this->assertSame(['website','image'],array_column($playlist,'kind'));
-        $this->delete('/lobby/screens/'.$first->id.'/items/'.$items[0]->id)->assertRedirect();
+        $this->delete('/lobby/screens/'.$first->admin_code.'/items/'.$items[0]->id)->assertRedirect();
         $this->assertFileDoesNotExist($this->mediaPath.'/'.$items[0]->file_path);
     }
 
@@ -133,10 +137,10 @@ class LobbyDisplayTest extends TestCase
         $this->post('/lobby/screens', ['name'=>'TV A','active'=>1]);
         $screen = LobbyScreen::firstOrFail();
         $base = ['title'=>'Tayangan','fit'=>'contain','duration_seconds'=>15,'mode'=>'always','active'=>1];
-        $this->post('/lobby/screens/'.$screen->id.'/items', $base + [
+        $this->post('/lobby/screens/'.$screen->admin_code.'/items', $base + [
             'kind'=>'website','website_url'=>'http://example.org/',
         ])->assertSessionHasErrors('website_url');
-        $this->post('/lobby/screens/'.$screen->id.'/items', $base + [
+        $this->post('/lobby/screens/'.$screen->admin_code.'/items', $base + [
             'kind'=>'image','file'=>UploadedFile::fake()->createWithContent('dokumen.txt','bukan gambar'),
         ])->assertSessionHasErrors('file');
         $this->assertDatabaseCount('lobby_items',0);
@@ -148,7 +152,7 @@ class LobbyDisplayTest extends TestCase
         $this->actingAs(User::factory()->create());
         $this->post('/lobby/screens', ['name' => 'TV Lobby', 'active' => 1]);
         $screen = LobbyScreen::firstOrFail();
-        $this->post('/lobby/screens/'.$screen->id.'/items', [
+        $this->post('/lobby/screens/'.$screen->admin_code.'/items', [
             'title' => 'Berita', 'kind' => 'webshot', 'website_url' => 'https://www.detik.com/',
             'snapshot_interval_minutes' => 15, 'fit' => 'cover',
             'duration_seconds' => 20, 'mode' => 'always', 'active' => 1,

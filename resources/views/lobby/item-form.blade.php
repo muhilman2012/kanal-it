@@ -1,4 +1,4 @@
-<form method="post" enctype="multipart/form-data" action="/lobby/screens/{{ $screen->id }}/items{{ $item ? '/'.$item->id : '' }}">@csrf @if($item)@method('put')@endif
+<form method="post" enctype="multipart/form-data" action="/lobby/screens/{{ $screen->admin_code }}/items{{ $item ? '/'.$item->id : '' }}">@csrf @if($item)@method('put')@endif
 <label>Judul tayangan<input name="title" value="{{ $item?->title }}" maxlength="150" required></label>
 <label>Jenis materi<select name="kind" required><option value="image" @selected(!$item || $item->kind === 'image')>Gambar</option><option value="video" @selected($item?->kind === 'video')>Video</option><option value="website" @selected($item?->kind === 'website')>Laman web langsung</option><option value="webshot" @selected($item?->kind === 'webshot')>Laman web (tangkapan layar)</option></select></label>
 <label>Unggah gambar atau video<input type="file" name="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm"></label>
