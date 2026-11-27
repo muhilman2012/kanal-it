@@ -4,10 +4,60 @@ const detailLabel = document.querySelector('#detail');
 const dot = document.querySelector('#status-dot');
 const activateButton = document.querySelector('#activate');
 const voiceButton = document.querySelector('#test-voice');
+const voiceSelect = document.querySelector('#voice-select');
+const voiceHelp = document.querySelector('#voice-help');
+const rateInput = document.querySelector('#voice-rate');
+const volumeInput = document.querySelector('#voice-volume');
 const clock = document.querySelector('#clock');
 let enabled = false;
 let busy = false;
-let audioContext;
+
+function savedSetting(name, fallback) {
+    try { return localStorage.getItem('announcer-' + name) || fallback; }
+    catch { return fallback; }
+}
+
+function saveSetting(name, value) {
+    try { localStorage.setItem('announcer-' + name, value); } catch { /* Storage may be disabled. */ }
+}
+
+rateInput.value = savedSetting('rate', '0.9');
+volumeInput.value = savedSetting('volume', '0.8');
+function updateVoiceControls() {
+    document.querySelector('#rate-value').textContent = Number(rateInput.value).toLocaleString('id-ID') + '×';
+    document.querySelector('#volume-value').textContent = Math.round(Number(volumeInput.value) * 100) + '%';
+}
+for (const [input, name] of [[rateInput, 'rate'], [volumeInput, 'volume']]) {
+    input.addEventListener('input', () => { saveSetting(name, input.value); updateVoiceControls(); });
+}
+updateVoiceControls();
+
+function availableVoices() {
+    return 'speechSynthesis' in window ? speechSynthesis.getVoices() : [];
+}
+
+function populateVoices() {
+    const voices = availableVoices();
+    const indonesian = voices.filter(voice => voice.lang.toLowerCase().startsWith('id'));
+    const choices = indonesian.length ? indonesian : voices;
+    voiceSelect.replaceChildren(new Option('Suara bawaan browser', ''));
+    for (const voice of choices) {
+        voiceSelect.add(new Option(voice.name + ' (' + voice.lang + ')', voice.voiceURI));
+    }
+    const saved = savedSetting('voice', '');
+    if (choices.some(voice => voice.voiceURI === saved)) voiceSelect.value = saved;
+    voiceHelp.textContent = indonesian.length
+        ? 'Pilih suara yang tersedia di perangkat ini, lalu dengarkan uji suara. Browser tidak memberi label jenis kelamin suara.'
+        : 'Belum ada suara Bahasa Indonesia di browser ini. Suara bahasa lain mungkin salah melafalkan teks; pasang suara Bahasa Indonesia pada perangkat speaker.';
+}
+voiceSelect.addEventListener('change', () => saveSetting('voice', voiceSelect.value));
+if ('speechSynthesis' in window) {
+    populateVoices();
+    speechSynthesis.addEventListener('voiceschanged', populateVoices);
+} else {
+    voiceSelect.disabled = true;
+    voiceHelp.textContent = 'Browser ini tidak mendukung pembacaan teks.';
+}
 
 function setStatus(title, detail, state = '') {
     statusLabel.textContent = title;
@@ -31,27 +81,13 @@ async function request(path, body) {
 }
 
 async function bell() {
-    if (!audioContext) throw new Error('Speaker belum diaktifkan');
-    await audioContext.resume();
-    const start = audioContext.currentTime;
-    for (const [index, frequency] of [880, 660, 880].entries()) {
-        const oscillator = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        oscillator.type = 'sine';
-        oscillator.frequency.value = frequency;
-        gain.gain.setValueAtTime(0.0001, start + index * 0.34);
-        gain.gain.exponentialRampToValueAtTime(0.16, start + index * 0.34 + 0.04);
-        gain.gain.exponentialRampToValueAtTime(0.0001, start + index * 0.34 + 0.28);
-        oscillator.connect(gain).connect(audioContext.destination);
-        oscillator.start(start + index * 0.34);
-        oscillator.stop(start + index * 0.34 + 0.3);
-    }
-    await new Promise(resolve => setTimeout(resolve, 1150));
+    await playAudio('/announcer-bell.mp3', 0.8);
 }
 
-function playAudio(url) {
+function playAudio(url, volume = 1) {
     return new Promise((resolve, reject) => {
         const audio = new Audio(url);
+        audio.volume = volume;
         audio.onended = resolve;
         audio.onerror = () => reject(new Error('Berkas audio gagal diputar'));
         audio.play().catch(() => reject(new Error('Browser memblokir audio. Aktifkan speaker kembali.')));
@@ -63,9 +99,10 @@ function speak(text) {
         if (!('speechSynthesis' in window)) return reject(new Error('Browser tidak mendukung text to speech'));
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'id-ID';
-        utterance.rate = 0.92;
-        utterance.volume = 1;
-        const voice = speechSynthesis.getVoices().find(item => item.lang.toLowerCase().startsWith('id'));
+        utterance.rate = Number(rateInput.value);
+        utterance.volume = Number(volumeInput.value);
+        const voice = availableVoices().find(item => item.voiceURI === voiceSelect.value)
+            || availableVoices().find(item => item.lang.toLowerCase().startsWith('id'));
         if (voice) utterance.voice = voice;
         utterance.onend = resolve;
         utterance.onerror = event => reject(new Error('Text to speech gagal: ' + (event.error || 'suara tidak tersedia')));
@@ -77,6 +114,7 @@ function speak(text) {
 async function poll() {
     if (!enabled || busy) return;
     busy = true;
+    voiceButton.disabled = true;
     try {
         const result = await request('/next');
         if (!result.event) {
@@ -99,13 +137,12 @@ async function poll() {
         setStatus('Koneksi terputus', String(error.message || error) + '. Mencoba lagi.', 'error');
     } finally {
         busy = false;
+        voiceButton.disabled = false;
     }
 }
 
 activateButton.addEventListener('click', async () => {
     try {
-        audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
-        await audioContext.resume();
         await bell();
         enabled = true;
         activateButton.hidden = true;
